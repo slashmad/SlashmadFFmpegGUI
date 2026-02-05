@@ -1,0 +1,24 @@
+app-id: com.slashmad.TimelapseFFmpegGUI
+runtime: org.gnome.Platform
+runtime-version: "48"
+sdk: org.gnome.Sdk
+command: ffmpeg-gui
+finish-args:
+  - --share=ipc
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --talk-name=org.freedesktop.Flatpak
+  - --filesystem=xdg-download
+  - --filesystem=xdg-videos
+modules:
+  - name: ffmpeg-gui
+    buildsystem: simple
+    build-commands:
+      - pip3 install --prefix=/app --no-deps --no-build-isolation .
+      - install -D data/com.slashmad.TimelapseFFmpegGUI.desktop /app/share/applications/com.slashmad.TimelapseFFmpegGUI.desktop
+      - install -D data/com.slashmad.TimelapseFFmpegGUI.metainfo.xml /app/share/metainfo/com.slashmad.TimelapseFFmpegGUI.metainfo.xml
+      - install -D data/icons/hicolor/scalable/apps/com.slashmad.TimelapseFFmpegGUI.svg /app/share/icons/hicolor/scalable/apps/com.slashmad.TimelapseFFmpegGUI.svg
+      - install -D README.md /app/share/doc/ffmpeg-gui/README.md
+    sources:
+      - type: dir
+        path: ..
