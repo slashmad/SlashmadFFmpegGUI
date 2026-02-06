@@ -70,13 +70,3 @@ To remove the override:
 ```
 flatpak override --user --reset com.slashmad.TimelapseFFmpegGUI
 ```
-
-### App Store Assets
-
-To show screenshots in app stores (AppStream/Flathub), place images in `data/screenshots/`
-and update `data/com.slashmad.TimelapseFFmpegGUI.metainfo.xml` with their public URLs. Example filenames:
-
-- `data/screenshots/encode.png`
-- `data/screenshots/hardware.png`
-
-If you don't use GitHub, replace the screenshot URLs in the metainfo with your own hosted files.
