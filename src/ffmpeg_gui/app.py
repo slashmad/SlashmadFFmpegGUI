@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+
 import gi
 
 gi.require_version("Gtk", "4.0")
@@ -15,6 +17,10 @@ def _on_activate(app: Gtk.Application) -> None:
 
 
 def main() -> None:
+    # NVIDIA + GTK4 Vulkan can be unstable in long-running live preview/capture sessions.
+    # Respect user override if already set.
+    os.environ.setdefault("GSK_RENDERER", "ngl")
+
     setup_gettext()
     app = Gtk.Application(application_id="com.slashmad.TimelapseFFmpegGUI")
     app.connect("activate", _on_activate)

@@ -24,6 +24,12 @@ A lightweight GTK4 GUI for FFmpeg with hardware-acceleration detection.
 - Adjust audio/video sync with `Audio delay (ms)`.
 - Export with selected codecs/container and review generated FFmpeg command before running.
 
+## Troubleshooting
+
+- If app preview/capture crashes with NVIDIA + GTK4 stack traces (`gsk_vulkan`, `libnvidia-glcore`), run with:
+  - `GSK_RENDERER=ngl ./dev_run.sh`
+- The app now defaults to `GSK_RENDERER=ngl` unless you override it.
+
 ## VHS Capture Notes (Magix / em28xx)
 
 - For best stability on em28xx devices, use `Live during capture = Stop live view`.

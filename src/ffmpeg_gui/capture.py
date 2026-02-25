@@ -1812,23 +1812,23 @@ class CapturePage(Gtk.Box):
                 "-r",
                 "25",
                 "-c:v",
-                "libx264",
-                "-preset",
-                "ultrafast",
-                "-tune",
-                "zerolatency",
+                "mpeg2video",
                 "-pix_fmt",
                 "yuv420p",
+                "-b:v",
+                "2M",
+                "-maxrate",
+                "2M",
+                "-bufsize",
+                "1M",
                 "-g",
                 "25",
                 "-bf",
                 "0",
-                "-crf",
-                "30",
             ]
 
             if has_audio:
-                cmd += ["-c:a", "aac", "-b:a", "128k", "-ar", "48000", "-ac", "2"]
+                cmd += ["-c:a", "mp2", "-b:a", "128k", "-ar", "48000", "-ac", "2"]
             else:
                 cmd += ["-an"]
 
