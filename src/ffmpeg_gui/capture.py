@@ -1984,16 +1984,16 @@ class CapturePage(Gtk.Box):
         return False
 
     def on_preview_start_clicked(self, _button: Gtk.Button) -> None:
-        if self.capture_runner.running:
-            if self._capture_monitor_uri:
-                audio_source = self.audio_source_combo.get_active_id() or ""
-                self.start_preview_from_uri(
-                    self._capture_monitor_uri,
-                    with_audio=bool(audio_source),
-                    preserve_watchdog_state=True,
-                )
-                return
+        if self._capture_monitor_uri:
+            audio_source = self.audio_source_combo.get_active_id() or ""
+            self.start_preview_from_uri(
+                self._capture_monitor_uri,
+                with_audio=bool(audio_source),
+                preserve_watchdog_state=True,
+            )
+            return
 
+        if self.capture_runner.running:
             self._set_preview_status(
                 _("Live view during capture requires policy Keep or Auto-fallback before capture start.")
             )
@@ -2129,6 +2129,21 @@ class CapturePage(Gtk.Box):
         return detail.strip()
 
     def start_preview(self, with_audio: bool = True, preserve_watchdog_state: bool = False) -> None:
+        if self._capture_monitor_uri:
+            audio_source = self.audio_source_combo.get_active_id() or ""
+            self.start_preview_from_uri(
+                self._capture_monitor_uri,
+                with_audio=bool(audio_source),
+                preserve_watchdog_state=preserve_watchdog_state,
+            )
+            return
+
+        if self.capture_runner.running:
+            self._set_preview_status(
+                _("Live view during capture requires policy Keep or Auto-fallback before capture start.")
+            )
+            return
+
         self.stop_preview()
         if not preserve_watchdog_state:
             self._preview_audio_restart_count = 0
