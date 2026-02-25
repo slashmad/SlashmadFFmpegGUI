@@ -16,6 +16,7 @@ from ffmpeg_gui.encode import (
     write_concat_file,
 )
 from ffmpeg_gui.capture import CapturePage
+from ffmpeg_gui.edit import EditPage
 from ffmpeg_gui.ffmpeg import detect_ffmpeg, detect_renderers, list_encoders, list_pixel_formats
 from ffmpeg_gui.i18n import _
 from ffmpeg_gui.runner import FFmpegRunner
@@ -91,11 +92,16 @@ class MainWindow(Gtk.ApplicationWindow):
         self.capture_page_scroller = Gtk.ScrolledWindow()
         self.capture_page_scroller.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
         self.capture_page_scroller.set_child(self.capture_page)
+        self.edit_page = EditPage()
+        self.edit_page_scroller = Gtk.ScrolledWindow()
+        self.edit_page_scroller.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+        self.edit_page_scroller.set_child(self.edit_page)
         self.hardware_page = self._build_hardware_page()
         self.help_page = self._build_help_page()
 
         self.notebook.append_page(self.encode_page, Gtk.Label(label=_("Encode")))
         self.notebook.append_page(self.capture_page_scroller, Gtk.Label(label=_("Capture")))
+        self.notebook.append_page(self.edit_page_scroller, Gtk.Label(label=_("Edit")))
         self.notebook.append_page(self.hardware_page, Gtk.Label(label=_("Hardware")))
         self.notebook.append_page(self.help_page, Gtk.Label(label=_("Help")))
 
@@ -547,6 +553,12 @@ class MainWindow(Gtk.ApplicationWindow):
         self._populate_preset_combo(self.codec_combo.get_active_id())
         self._update_codec_info()
         self.capture_page.sync_capabilities(
+            ffmpeg_command=self._ffmpeg_command,
+            encoders=self._encoders,
+            pixel_formats=self._pixel_formats,
+            hardware_info=self._hardware_info,
+        )
+        self.edit_page.sync_capabilities(
             ffmpeg_command=self._ffmpeg_command,
             encoders=self._encoders,
             pixel_formats=self._pixel_formats,
@@ -1140,4 +1152,5 @@ class MainWindow(Gtk.ApplicationWindow):
     def on_close_request(self, _window: Gtk.ApplicationWindow) -> bool:
         self.runner.stop()
         self.capture_page.shutdown()
+        self.edit_page.shutdown()
         return False

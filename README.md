@@ -9,12 +9,20 @@ A lightweight GTK4 GUI for FFmpeg with hardware-acceleration detection.
 - Choose codec, preset, quality (CRF/CQ), pixel format, FPS, tune, and extra FFmpeg args.
 - Supports common image formats plus RAW (if your FFmpeg build supports it).
 - Dedicated **Capture** tab for VHS/USB/PCI capture workflows.
+- Dedicated **Edit** tab for post-capture correction with in-app preview.
 - Live video + live audio monitoring in-app with independent mute/volume controls.
 - Capture profiles (archive/delivery/proxy), source format selection, and FFmpeg command preview.
 - Analog source input selector (for devices that expose it), e.g. `Composite` / `S-Video`.
 - Live-during-capture policy (`Stop`, `Keep`, `Auto-fallback`) with watchdog-based audio recovery.
 - Audio cleanup presets (hum filter/cleanup) and gain controls for noisy analog captures.
 - `Keep`/`Auto-fallback` now use a single-device monitor stream during capture (preview comes from the same FFmpeg process instead of opening `/dev/video*` twice).
+
+## Edit Workflow Notes
+
+- Load a captured media file in the `Edit` tab.
+- Preview corrections live (brightness, contrast, saturation, deinterlace, and denoise when available).
+- Adjust audio/video sync with `Audio delay (ms)`.
+- Export with selected codecs/container and review generated FFmpeg command before running.
 
 ## VHS Capture Notes (Magix / em28xx)
 
