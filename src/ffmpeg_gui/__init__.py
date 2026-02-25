@@ -1,1 +1,1 @@
-__all__ = ["app", "ffmpeg", "gui", "encode", "runner", "i18n"]
+__all__ = ["app", "ffmpeg", "gui", "capture", "encode", "runner", "i18n"]

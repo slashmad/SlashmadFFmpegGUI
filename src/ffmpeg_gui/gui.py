@@ -15,6 +15,7 @@ from ffmpeg_gui.encode import (
     quality_flag_for_codec,
     write_concat_file,
 )
+from ffmpeg_gui.capture import CapturePage
 from ffmpeg_gui.ffmpeg import detect_ffmpeg, detect_renderers, list_encoders, list_pixel_formats
 from ffmpeg_gui.i18n import _
 from ffmpeg_gui.runner import FFmpegRunner
@@ -52,6 +53,8 @@ class MainWindow(Gtk.ApplicationWindow):
         super().__init__(application=app)
         self.set_title(_("Timelapse FFmpeg GUI"))
         self.set_default_size(900, 720)
+        self.set_resizable(True)
+        self.set_decorated(True)
 
         self.input_items: list[str] = []
         self.output_auto = True
@@ -84,12 +87,19 @@ class MainWindow(Gtk.ApplicationWindow):
         root.append(self.notebook)
 
         self.encode_page = self._build_encode_page()
+        self.capture_page = CapturePage()
+        self.capture_page_scroller = Gtk.ScrolledWindow()
+        self.capture_page_scroller.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+        self.capture_page_scroller.set_child(self.capture_page)
         self.hardware_page = self._build_hardware_page()
         self.help_page = self._build_help_page()
 
         self.notebook.append_page(self.encode_page, Gtk.Label(label=_("Encode")))
+        self.notebook.append_page(self.capture_page_scroller, Gtk.Label(label=_("Capture")))
         self.notebook.append_page(self.hardware_page, Gtk.Label(label=_("Hardware")))
         self.notebook.append_page(self.help_page, Gtk.Label(label=_("Help")))
+
+        self.connect("close-request", self.on_close_request)
 
         self.refresh()
         self.update_preview()
@@ -536,6 +546,12 @@ class MainWindow(Gtk.ApplicationWindow):
         self._populate_pix_fmt_combo()
         self._populate_preset_combo(self.codec_combo.get_active_id())
         self._update_codec_info()
+        self.capture_page.sync_capabilities(
+            ffmpeg_command=self._ffmpeg_command,
+            encoders=self._encoders,
+            pixel_formats=self._pixel_formats,
+            hardware_info=self._hardware_info,
+        )
 
     def _populate_codec_combo(self) -> None:
         selected = self.codec_combo.get_active_id()
@@ -1119,4 +1135,9 @@ class MainWindow(Gtk.ApplicationWindow):
         end_iter = self.log_buffer.get_end_iter()
         self.log_buffer.insert(end_iter, line + "\n")
         self.log_view.scroll_to_iter(end_iter, 0.0, False, 0.0, 1.0)
+        return False
+
+    def on_close_request(self, _window: Gtk.ApplicationWindow) -> bool:
+        self.runner.stop()
+        self.capture_page.shutdown()
         return False

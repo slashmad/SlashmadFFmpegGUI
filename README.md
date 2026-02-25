@@ -8,6 +8,28 @@ A lightweight GTK4 GUI for FFmpeg with hardware-acceleration detection.
 - Output defaults to the same folder as your images.
 - Choose codec, preset, quality (CRF/CQ), pixel format, FPS, tune, and extra FFmpeg args.
 - Supports common image formats plus RAW (if your FFmpeg build supports it).
+- Dedicated **Capture** tab for VHS/USB/PCI capture workflows.
+- Live video + live audio monitoring in-app with independent mute/volume controls.
+- Capture profiles (archive/delivery/proxy), source format selection, and FFmpeg command preview.
+- Live-during-capture policy (`Stop`, `Keep`, `Auto-fallback`) with watchdog-based audio recovery.
+- Audio cleanup presets (hum filter/cleanup) and gain controls for noisy analog captures.
+
+## VHS Capture Notes (Magix / em28xx)
+
+- For best stability on em28xx devices, use `Live during capture = Stop live view`.
+- If you want simultaneous monitoring and capture, use `Auto-fallback`; the app will fall back to video-only preview if live audio fails.
+- The app keeps default capture as raw stereo (`Channels = 2`, `Audio cleanup = Off`, `Gain = 0.0 dB`).
+- If you have analog hum/noise, enable one of the cleanup presets (`Hum 50 Hz + cleanup` is usually correct in Sweden/Europe).
+- ALSA card indices (`hw:1,0`, `hw:2,0`) can change between boots; prefer stable source names shown in the UI (`plughw:CARD=...,DEV=...`).
+
+Suggested VHS archive baseline:
+
+- Profile: `VHS Archive (FFV1 + PCM)`
+- Container: `MKV`
+- Video codec: `ffv1`
+- Audio codec: `pcm_s16le`
+- TV standard: `PAL`
+- Input format: `YUYV` (mapped to FFmpeg `yuyv422`)
 
 ## Run locally (Fedora)
 
@@ -17,6 +39,12 @@ Install dependencies (package names may vary by Fedora version):
 - `python3-gobject`
 - `gtk4`
 - `ffmpeg`
+- `v4l-utils`
+- `pipewire-utils` (or PulseAudio tooling)
+- `gstreamer1`
+- `gstreamer1-plugins-good`
+- `gstreamer1-plugins-bad-free`
+- `gstreamer1-plugins-bad-free-gtk4` (for embedded live video preview)
 
 Run:
 
