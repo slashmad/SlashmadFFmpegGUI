@@ -11,6 +11,7 @@ A lightweight GTK4 GUI for FFmpeg with hardware-acceleration detection.
 - Dedicated **Capture** tab for VHS/USB/PCI capture workflows.
 - Live video + live audio monitoring in-app with independent mute/volume controls.
 - Capture profiles (archive/delivery/proxy), source format selection, and FFmpeg command preview.
+- Analog source input selector (for devices that expose it), e.g. `Composite` / `S-Video`.
 - Live-during-capture policy (`Stop`, `Keep`, `Auto-fallback`) with watchdog-based audio recovery.
 - Audio cleanup presets (hum filter/cleanup) and gain controls for noisy analog captures.
 

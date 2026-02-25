@@ -88,6 +88,7 @@ VHS_PROFILES: list[dict[str, Any]] = [
             "video_preset": "auto",
             "video_tune": "",
             "video_standard": "pal",
+            "video_source_input": "0",
             "audio_filter_preset": "off",
             "audio_gain_db": 0.0,
         },
@@ -113,6 +114,7 @@ VHS_PROFILES: list[dict[str, Any]] = [
             "video_preset": "veryfast",
             "video_tune": "",
             "video_standard": "pal",
+            "video_source_input": "0",
             "audio_filter_preset": "cleanup_mild",
             "audio_gain_db": 0.0,
         },
@@ -138,6 +140,7 @@ VHS_PROFILES: list[dict[str, Any]] = [
             "video_preset": "auto",
             "video_tune": "",
             "video_standard": "auto",
+            "video_source_input": "0",
             "audio_filter_preset": "off",
             "audio_gain_db": 0.0,
         },
@@ -231,6 +234,48 @@ def list_video_devices() -> list[dict[str, str]]:
             return parsed
 
     return [{"name": dev.name, "path": str(dev)} for dev in sorted(Path("/dev").glob("video*"))]
+
+
+def list_video_inputs(device: str) -> list[dict[str, str]]:
+    rc, out, _ = _run_command(["v4l2-ctl", "-d", device, "--list-inputs"], timeout=8)
+    if rc != 0 or not out:
+        return []
+
+    inputs: list[dict[str, str]] = []
+    current_id: str | None = None
+
+    for raw in out.splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+
+        single_line = re.match(r"^(\d+)\s*:\s*(.+)$", line)
+        if single_line:
+            idx, name = single_line.groups()
+            inputs.append({"id": idx, "name": name.strip()})
+            current_id = None
+            continue
+
+        input_match = re.search(r"Input\s*:?\s*(\d+)", line)
+        if input_match:
+            current_id = input_match.group(1)
+            continue
+
+        name_match = re.search(r"Name\s*:?\s*(.+)$", line)
+        if name_match and current_id is not None:
+            inputs.append({"id": current_id, "name": name_match.group(1).strip()})
+            current_id = None
+
+    deduped: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for item in inputs:
+        idx = item["id"]
+        if idx in seen:
+            continue
+        deduped.append(item)
+        seen.add(idx)
+
+    return deduped
 
 
 def list_audio_sources() -> list[dict[str, str]]:
@@ -393,6 +438,27 @@ def _prepare_v4l2_audio_capture(video_device: str) -> list[str]:
     return warnings
 
 
+def _prepare_v4l2_video_input(video_device: str, input_id: str) -> list[str]:
+    warnings: list[str] = []
+    if not video_device or not input_id:
+        return warnings
+
+    rc, _stdout, err = _run_command(
+        ["v4l2-ctl", "-d", video_device, f"--set-input={input_id}"],
+        timeout=4.0,
+    )
+    if rc == 0:
+        return warnings
+
+    low = err.lower()
+    if "inappropriate ioctl" in low or "unknown" in low:
+        warnings.append(_("Could not set video input on this device."))
+        return warnings
+
+    warnings.append(_("Could not set video input: ") + (err or "unknown error"))
+    return warnings
+
+
 class CapturePage(Gtk.Box):
     def __init__(self) -> None:
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=12)
@@ -496,6 +562,19 @@ class CapturePage(Gtk.Box):
         refresh_devices_button.set_tooltip_text(_("Rescan video and audio devices"))
         refresh_devices_button.connect("clicked", self.on_refresh_devices_clicked)
         video_row.append(refresh_devices_button)
+
+        source_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        input_box.append(source_row)
+
+        source_label = Gtk.Label(label=_("Video input"))
+        source_label.set_size_request(120, -1)
+        source_label.set_xalign(0)
+        source_row.append(source_label)
+
+        self.video_input_combo = Gtk.ComboBoxText()
+        self.video_input_combo.set_hexpand(True)
+        self.video_input_combo.connect("changed", self.on_capture_settings_changed)
+        source_row.append(self.video_input_combo)
 
         audio_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         input_box.append(audio_row)
@@ -942,6 +1021,7 @@ class CapturePage(Gtk.Box):
         else:
             self.audio_source_combo.set_active_id("")
 
+        self._refresh_video_input_options()
         self._refresh_video_format_options()
 
     def _populate_profiles(self) -> None:
@@ -1017,6 +1097,10 @@ class CapturePage(Gtk.Box):
         input_format = values.get("video_input_format", "")
         if input_format:
             self.video_format_combo.set_active_id(input_format)
+
+        video_source_input = values.get("video_source_input")
+        if video_source_input is not None:
+            self.video_input_combo.set_active_id(str(video_source_input))
 
         self.profile_info_label.set_text(profile.get("description", ""))
         self.update_capture_command_preview()
@@ -1157,6 +1241,7 @@ class CapturePage(Gtk.Box):
         self.capture_status_label.set_text(_("Devices refreshed."))
 
     def on_video_device_changed(self, _combo: Gtk.ComboBoxText) -> None:
+        self._refresh_video_input_options()
         self._refresh_video_format_options()
         self.update_capture_command_preview()
 
@@ -1199,6 +1284,34 @@ class CapturePage(Gtk.Box):
 
         self.video_format_combo.set_active_id("")
         self.video_size_combo.set_active_id("720x576" if "720x576" in size_values else "")
+
+    def _refresh_video_input_options(self) -> None:
+        device = self.video_device_combo.get_active_id() or ""
+        current = self.video_input_combo.get_active_id() or ""
+
+        self.video_input_combo.remove_all()
+        self.video_input_combo.append("", _("auto"))
+
+        if not device:
+            self.video_input_combo.set_active_id("")
+            return
+
+        inputs = list_video_inputs(device)
+        for item in inputs:
+            idx = item.get("id", "")
+            name = item.get("name", "")
+            if idx:
+                label = f"{idx} - {name}" if name else idx
+                self.video_input_combo.append(idx, label)
+
+        if current and self.video_input_combo.set_active_id(current):
+            return
+        if self.video_input_combo.set_active_id("0"):
+            return
+        if inputs:
+            self.video_input_combo.set_active_id(inputs[0].get("id", ""))
+            return
+        self.video_input_combo.set_active_id("")
 
     def on_match_fps_toggled(self, _button: Gtk.CheckButton) -> None:
         self.output_fps_spin.set_sensitive(not self.match_fps_check.get_active())
@@ -1470,6 +1583,10 @@ class CapturePage(Gtk.Box):
             self.stop_preview()
 
         video_device = self.video_device_combo.get_active_id() or ""
+        video_input_id = self.video_input_combo.get_active_id() or ""
+        for warning in _prepare_v4l2_video_input(video_device, video_input_id):
+            self._append_capture_status_warning(warning)
+
         for warning in _prepare_v4l2_audio_capture(video_device):
             self._append_capture_status_warning(warning)
 
@@ -1484,6 +1601,8 @@ class CapturePage(Gtk.Box):
         self._capture_xrun_reported = False
         self._append_capture_log(f"[capture] Live policy: {live_policy}")
         audio_source = self.audio_source_combo.get_active_id() or ""
+        if video_input_id:
+            self._append_capture_log(f"[capture] Video input: {video_input_id}")
         if audio_source:
             backend = self.audio_backend_combo.get_active_id() or "pulse"
             self._append_capture_log(f"[capture] Audio input: {backend}:{audio_source}")
@@ -1692,6 +1811,10 @@ class CapturePage(Gtk.Box):
         if not video_device:
             self._set_preview_status(_("Choose a video device first."))
             return
+
+        video_input_id = self.video_input_combo.get_active_id() or ""
+        for warning in _prepare_v4l2_video_input(video_device, video_input_id):
+            self._append_capture_status_warning(warning)
 
         for warning in _prepare_v4l2_audio_capture(video_device):
             self._append_capture_status_warning(warning)
