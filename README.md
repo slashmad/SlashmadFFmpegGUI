@@ -32,6 +32,35 @@ Suggested VHS archive baseline:
 - TV standard: `PAL`
 - Input format: `YUYV` (mapped to FFmpeg `yuyv422`)
 
+### Magix S-Video fix (em28xx `card=105`)
+
+Some Linux setups auto-detect Magix USB Videowandler with a board profile where `S-Video` does not route correctly.
+If `Composite` works but `S-Video` is black, force em28xx board profile `105`.
+
+Temporary test (until reboot):
+
+```bash
+sudo modprobe -r em28xx_v4l em28xx_alsa em28xx
+sudo modprobe em28xx card=105 usb_xfer_mode=1
+sudo modprobe em28xx_v4l
+```
+
+Permanent setup:
+
+```bash
+sudo tee /etc/modprobe.d/em28xx-magix.conf >/dev/null <<'EOF'
+options em28xx card=105 usb_xfer_mode=1
+EOF
+```
+
+Then reconnect the USB device or reload modules:
+
+```bash
+sudo modprobe -r em28xx_v4l em28xx_alsa em28xx
+sudo modprobe em28xx
+sudo modprobe em28xx_v4l
+```
+
 ## Run locally (Fedora)
 
 Install dependencies (package names may vary by Fedora version):

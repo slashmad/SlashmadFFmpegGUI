@@ -177,6 +177,9 @@ V4L2_TO_GST_RAW_FORMAT: dict[str, str] = {
     "GREY": "GRAY8",
 }
 
+MAGIX_USB_VENDOR_ID = "1b80"
+MAGIX_USB_PRODUCT_ID = "e349"
+
 
 def _run_command(args: list[str], timeout: float = 8.0) -> tuple[int, str, str]:
     try:
@@ -224,6 +227,70 @@ def _parse_v4l2_devices(text: str) -> list[dict[str, str]]:
         seen.add(path)
 
     return deduped
+
+
+def _read_text_file(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8", errors="ignore").strip()
+    except OSError:
+        return ""
+
+
+def _video_device_usb_ids(video_device: str) -> tuple[str, str] | None:
+    if not video_device.startswith("/dev/video"):
+        return None
+
+    node = Path(video_device).name
+    sys_video = Path("/sys/class/video4linux") / node
+    sys_device = sys_video / "device"
+    if not sys_device.exists():
+        return None
+
+    try:
+        resolved = sys_device.resolve()
+    except OSError:
+        return None
+
+    for path in (resolved, *resolved.parents):
+        vendor = _read_text_file(path / "idVendor").lower()
+        product = _read_text_file(path / "idProduct").lower()
+        if vendor and product:
+            return vendor, product
+
+    return None
+
+
+def _em28xx_card_parameter_values() -> list[int]:
+    raw = _read_text_file(Path("/sys/module/em28xx/parameters/card"))
+    if not raw:
+        return []
+
+    values: list[int] = []
+    for token in re.findall(r"-?\d+", raw):
+        try:
+            values.append(int(token))
+        except ValueError:
+            continue
+    return values
+
+
+def _magix_em28xx_hint(video_device: str) -> str:
+    usb_ids = _video_device_usb_ids(video_device)
+    if usb_ids != (MAGIX_USB_VENDOR_ID, MAGIX_USB_PRODUCT_ID):
+        return ""
+
+    card_values = _em28xx_card_parameter_values()
+    if 105 in card_values:
+        return ""
+
+    if not card_values:
+        return _(
+            "Magix USB Videowandler detected. If S-Video is missing or black, set em28xx option card=105."
+        )
+
+    return _(
+        "Magix USB Videowandler detected. em28xx card=105 is not active, S-Video may fail. See README for permanent fix."
+    )
 
 
 def list_video_devices() -> list[dict[str, str]]:
@@ -575,6 +642,12 @@ class CapturePage(Gtk.Box):
         self.video_input_combo.set_hexpand(True)
         self.video_input_combo.connect("changed", self.on_capture_settings_changed)
         source_row.append(self.video_input_combo)
+
+        self.device_hint_label = Gtk.Label(label="")
+        self.device_hint_label.set_xalign(0)
+        self.device_hint_label.set_wrap(True)
+        self.device_hint_label.add_css_class("dim-label")
+        input_box.append(self.device_hint_label)
 
         audio_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         input_box.append(audio_row)
@@ -1023,6 +1096,7 @@ class CapturePage(Gtk.Box):
 
         self._refresh_video_input_options()
         self._refresh_video_format_options()
+        self._update_device_hints()
 
     def _populate_profiles(self) -> None:
         self.profile_combo.remove_all()
@@ -1243,6 +1317,7 @@ class CapturePage(Gtk.Box):
     def on_video_device_changed(self, _combo: Gtk.ComboBoxText) -> None:
         self._refresh_video_input_options()
         self._refresh_video_format_options()
+        self._update_device_hints()
         self.update_capture_command_preview()
 
     def on_audio_source_changed(self, _combo: Gtk.ComboBoxText) -> None:
@@ -1312,6 +1387,11 @@ class CapturePage(Gtk.Box):
             self.video_input_combo.set_active_id(inputs[0].get("id", ""))
             return
         self.video_input_combo.set_active_id("")
+
+    def _update_device_hints(self) -> None:
+        video_device = self.video_device_combo.get_active_id() or ""
+        hint = _magix_em28xx_hint(video_device)
+        self.device_hint_label.set_text(hint)
 
     def on_match_fps_toggled(self, _button: Gtk.CheckButton) -> None:
         self.output_fps_spin.set_sensitive(not self.match_fps_check.get_active())
