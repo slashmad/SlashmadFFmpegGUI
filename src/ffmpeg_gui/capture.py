@@ -208,6 +208,129 @@ def _pick_free_udp_port() -> int:
         sock.close()
 
 
+def _parse_bitrate_text(value: str) -> int | None:
+    text = value.strip().lower()
+    if not text:
+        return None
+
+    text = text.replace("bit/s", "").replace("bits/s", "").replace("bps", "").strip()
+    match = re.fullmatch(r"(\d+(?:\.\d+)?)([kmg])?", text)
+    if not match:
+        return None
+
+    amount = float(match.group(1))
+    suffix = match.group(2) or ""
+    scale = {"": 1.0, "k": 1_000.0, "m": 1_000_000.0, "g": 1_000_000_000.0}
+    return int(amount * scale[suffix])
+
+
+def _format_rate_per_hour(bits_per_second: int) -> str:
+    bytes_per_hour = (bits_per_second / 8.0) * 3600.0
+    mib_per_hour = bytes_per_hour / (1024.0 * 1024.0)
+    gib_per_hour = bytes_per_hour / (1024.0 * 1024.0 * 1024.0)
+    return f"~{gib_per_hour:.1f} GiB/h ({mib_per_hour:.0f} MiB/h)"
+
+
+def _ffprobe_bitrate(path: Path) -> int | None:
+    rc, out, _ = _run_command(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "format=bit_rate",
+            "-of",
+            "default=noprint_wrappers=1:nokey=1",
+            str(path),
+        ],
+        timeout=12.0,
+    )
+    if rc != 0 or not out:
+        return None
+    try:
+        return int(float(out.strip()))
+    except ValueError:
+        return None
+
+
+def _detect_ffv1_reference_bitrate() -> tuple[int | None, str]:
+    candidates = [
+        Path.cwd() / "capture-band1.mkv",
+        Path(__file__).resolve().parents[2] / "capture-band1.mkv",
+    ]
+
+    seen: set[str] = set()
+    for candidate in candidates:
+        key = str(candidate.resolve()) if candidate.exists() else str(candidate)
+        if key in seen:
+            continue
+        seen.add(key)
+        if not candidate.is_file():
+            continue
+        bitrate = _ffprobe_bitrate(candidate)
+        if bitrate and bitrate > 0:
+            return bitrate, str(candidate)
+
+    return None, ""
+
+
+def _profile_total_bitrate_estimate(
+    values: dict[str, Any],
+    ffv1_reference_bitrate: int | None = None,
+) -> tuple[int | None, str]:
+    video_codec = str(values.get("video_codec", "")).strip().lower()
+    audio_codec = str(values.get("audio_codec", "")).strip().lower()
+
+    width = 720
+    height = 576
+    size_match = re.match(r"^(\d+)x(\d+)$", str(values.get("video_size", "")).strip())
+    if size_match:
+        width = int(size_match.group(1))
+        height = int(size_match.group(2))
+
+    pixels = max(1, width * height)
+    pal_pixels = 720 * 576
+    scale = pixels / pal_pixels
+
+    video_bitrate = _parse_bitrate_text(str(values.get("video_bitrate", "")))
+    note = ""
+
+    if video_bitrate is None:
+        if video_codec == "ffv1":
+            if ffv1_reference_bitrate:
+                video_bitrate = int(ffv1_reference_bitrate * scale)
+                note = _("estimated from local FFV1 sample")
+            else:
+                video_bitrate = int(45_000_000 * scale)
+                note = _("content-dependent FFV1 estimate")
+        elif video_codec == "mjpeg":
+            video_bitrate = int(20_000_000 * scale)
+            note = _("typical MJPEG estimate")
+        elif video_codec in {"libx264", "h264"}:
+            video_bitrate = int(6_000_000 * scale)
+            note = _("typical H.264 estimate")
+        else:
+            video_bitrate = None
+
+    audio_bitrate = None
+    if audio_codec == "pcm_s16le":
+        sample_rate = int(values.get("sample_rate", 48000) or 48000)
+        channels = int(values.get("channels", "2") or 2)
+        audio_bitrate = sample_rate * channels * 16
+    elif audio_codec in {"aac", "libmp3lame", "mp3", "ac3", "opus", "vorbis"}:
+        audio_bitrate = _parse_bitrate_text(str(values.get("audio_bitrate", "")))
+        if audio_bitrate is None:
+            audio_bitrate = 192_000
+    elif audio_codec in {"none", ""}:
+        audio_bitrate = 0
+
+    if video_bitrate is None and audio_bitrate is None:
+        return None, note
+
+    total = int((video_bitrate or 0) + (audio_bitrate or 0))
+    return total if total > 0 else None, note
+
+
 def _parse_v4l2_devices(text: str) -> list[dict[str, str]]:
     devices: list[dict[str, str]] = []
     current_name = ""
@@ -549,6 +672,7 @@ class CapturePage(Gtk.Box):
         self._pixel_formats: list[PixelFormat] = []
         self._hardware_info: Any = None
         self._codec_description: dict[str, str] = {}
+        self._ffv1_reference_bitrate, self._ffv1_reference_path = _detect_ffv1_reference_bitrate()
 
         self._audio_source_backends: dict[str, str] = {}
 
@@ -622,6 +746,7 @@ class CapturePage(Gtk.Box):
 
         self.profile_info_label = Gtk.Label(label="")
         self.profile_info_label.set_xalign(0)
+        self.profile_info_label.set_wrap(True)
         self.profile_info_label.add_css_class("dim-label")
         input_box.append(self.profile_info_label)
 
@@ -1119,6 +1244,25 @@ class CapturePage(Gtk.Box):
         self.profile_combo.set_active_id("")
         self.profile_info_label.set_text("")
 
+    def _profile_info_text(self, profile: dict[str, Any]) -> str:
+        description = str(profile.get("description", "")).strip()
+        values = profile.get("values", {})
+        total_bitrate, note = _profile_total_bitrate_estimate(values, self._ffv1_reference_bitrate)
+
+        estimate = ""
+        if total_bitrate:
+            estimate = _("Estimated size: ") + _format_rate_per_hour(total_bitrate)
+            if note:
+                estimate += f" ({note})"
+        elif note:
+            estimate = _("Estimated size: unknown") + f" ({note})"
+
+        if description and estimate:
+            return description + "\n" + estimate
+        if estimate:
+            return estimate
+        return description
+
     def on_apply_profile_clicked(self, _button: Gtk.Button) -> None:
         profile_id = self.profile_combo.get_active_id()
         if not profile_id:
@@ -1189,7 +1333,7 @@ class CapturePage(Gtk.Box):
         if video_source_input is not None:
             self.video_input_combo.set_active_id(str(video_source_input))
 
-        self.profile_info_label.set_text(profile.get("description", ""))
+        self.profile_info_label.set_text(self._profile_info_text(profile))
         self.update_capture_command_preview()
 
     def _populate_capture_codec_combos(self) -> None:
