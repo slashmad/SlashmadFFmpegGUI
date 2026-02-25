@@ -45,7 +45,7 @@ Suggested VHS archive baseline:
 Approximate profile size rates (shown in the Capture UI when selecting a profile):
 
 - `VHS Archive (FFV1 + PCM)`: about `~19.4 GiB/h` (`~19893 MiB/h`) on current sample setup (content-dependent).
-- `VHS Delivery (H.264 + AAC)`: about `~2.6 GiB/h` (`~2657 MiB/h`) with `6M + 192k`.
+- `VHS Delivery (H.264 + AAC)`: about `~2.6 GiB/h` (`~2657 MiB/h`) with `6M + 192k` (capture-safe defaults: `ultrafast`, cleanup `off`).
 - `VHS Proxy (MJPEG + PCM)`: about `~9.0 GiB/h` (`~9242 MiB/h`) using typical MJPEG assumptions.
 
 ### Magix S-Video fix (em28xx `card=105`)

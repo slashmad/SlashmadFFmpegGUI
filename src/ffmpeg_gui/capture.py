@@ -97,7 +97,7 @@ VHS_PROFILES: list[dict[str, Any]] = [
     {
         "id": "vhs_delivery_h264",
         "name": _("VHS Delivery (H.264 + AAC)"),
-        "description": _("Balanced profile for playback and sharing."),
+        "description": _("Balanced profile for playback and sharing (capture-safe defaults)."),
         "values": {
             "container": "mp4",
             "video_codec": "libx264",
@@ -112,11 +112,11 @@ VHS_PROFILES: list[dict[str, Any]] = [
             "match_source_fps": True,
             "output_fps": 25.0,
             "deinterlace": True,
-            "video_preset": "veryfast",
+            "video_preset": "ultrafast",
             "video_tune": "",
             "video_standard": "pal",
             "video_source_input": "0",
-            "audio_filter_preset": "cleanup_mild",
+            "audio_filter_preset": "off",
             "audio_gain_db": 0.0,
         },
     },
