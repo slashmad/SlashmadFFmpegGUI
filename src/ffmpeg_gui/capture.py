@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import re
 import shlex
+import socket
 import subprocess
 import time
 from pathlib import Path
@@ -196,6 +197,15 @@ def _run_command(args: list[str], timeout: float = 8.0) -> tuple[int, str, str]:
         return 127, "", _("Command not found: ") + args[0]
     except subprocess.TimeoutExpired:
         return 124, "", _("Command timed out")
+
+
+def _pick_free_udp_port() -> int:
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        sock.bind(("127.0.0.1", 0))
+        return int(sock.getsockname()[1])
+    finally:
+        sock.close()
 
 
 def _parse_v4l2_devices(text: str) -> list[dict[str, str]]:
@@ -553,8 +563,11 @@ class CapturePage(Gtk.Box):
         self._preview_audio_restart_count = 0
         self._preview_pending_watchdog_action = False
         self._preview_audio_fallback_reason = ""
+        self._preview_source_mode = "device"
+        self._preview_source_uri = ""
         self._capture_audio_open_error_reported = False
         self._capture_xrun_reported = False
+        self._capture_monitor_uri = ""
 
         self.capture_runner = FFmpegRunner(self._on_capture_output, self._on_capture_exit)
 
@@ -1490,7 +1503,11 @@ class CapturePage(Gtk.Box):
         warnings.append(_("Use MKV (recommended) or MOV for this capture profile."))
         return container, warnings
 
-    def _build_capture_command(self, auto_fix_compatibility: bool = False) -> tuple[list[str], list[str]]:
+    def _build_capture_command(
+        self,
+        auto_fix_compatibility: bool = False,
+        monitor_udp_port: int | None = None,
+    ) -> tuple[list[str], list[str]]:
         warnings: list[str] = []
 
         if not self._ffmpeg_command:
@@ -1638,6 +1655,45 @@ class CapturePage(Gtk.Box):
                 warnings.append(_("Could not parse extra args: ") + str(exc))
 
         cmd += [output_path]
+
+        if monitor_udp_port is not None:
+            warnings.append(_("Live monitor stream enabled (single-device mode)."))
+            cmd += ["-map", "0:v:0"]
+            if has_audio:
+                cmd += ["-map", "1:a:0"]
+
+            cmd += [
+                "-vf",
+                "scale=640:480:flags=fast_bilinear,format=yuv420p",
+                "-r",
+                "25",
+                "-c:v",
+                "libx264",
+                "-preset",
+                "ultrafast",
+                "-tune",
+                "zerolatency",
+                "-pix_fmt",
+                "yuv420p",
+                "-g",
+                "25",
+                "-bf",
+                "0",
+                "-crf",
+                "30",
+            ]
+
+            if has_audio:
+                cmd += ["-c:a", "aac", "-b:a", "128k", "-ar", "48000", "-ac", "2"]
+            else:
+                cmd += ["-an"]
+
+            cmd += [
+                "-f",
+                "mpegts",
+                f"udp://127.0.0.1:{monitor_udp_port}?pkt_size=1316&overrun_nonfatal=1&fifo_size=1000000",
+            ]
+
         return cmd, warnings
 
     def update_capture_command_preview(self) -> None:
@@ -1659,7 +1715,9 @@ class CapturePage(Gtk.Box):
 
         preview_was_running = self._preview_running
         live_policy = self._live_during_capture_policy()
-        if preview_was_running and live_policy == "stop":
+        monitor_during_capture = preview_was_running and live_policy in {"keep", "auto"}
+
+        if preview_was_running:
             self.stop_preview()
 
         video_device = self.video_device_combo.get_active_id() or ""
@@ -1670,8 +1728,17 @@ class CapturePage(Gtk.Box):
         for warning in _prepare_v4l2_audio_capture(video_device):
             self._append_capture_status_warning(warning)
 
+        monitor_port: int | None = None
+        monitor_uri = ""
+        if monitor_during_capture:
+            monitor_port = _pick_free_udp_port()
+            monitor_uri = f"udp://127.0.0.1:{monitor_port}"
+
         try:
-            cmd, warnings = self._build_capture_command(auto_fix_compatibility=True)
+            cmd, warnings = self._build_capture_command(
+                auto_fix_compatibility=True,
+                monitor_udp_port=monitor_port,
+            )
         except RuntimeError as exc:
             self.capture_status_label.set_text(str(exc))
             return
@@ -1686,16 +1753,18 @@ class CapturePage(Gtk.Box):
         if audio_source:
             backend = self.audio_backend_combo.get_active_id() or "pulse"
             self._append_capture_log(f"[capture] Audio input: {backend}:{audio_source}")
+        if monitor_uri:
+            self._append_capture_log(f"[capture] Live monitor stream: {monitor_uri}")
         self._append_capture_log(_("Running:") + " " + _shell_preview(cmd))
         if warnings:
             self.capture_status_label.set_text("\n".join(warnings))
         if preview_was_running and live_policy == "stop":
             self._append_capture_status_warning(_("Live view was stopped automatically during capture."))
-        if preview_was_running and live_policy == "keep":
+        if monitor_during_capture:
             self._append_capture_status_warning(
-                _("Live view kept during capture; this may increase risk of dropouts.")
+                _("Live view switched to capture monitor stream (single-device mode).")
             )
-        if preview_was_running and live_policy == "auto":
+        if monitor_during_capture and live_policy == "auto":
             self._append_capture_status_warning(_("Auto-fallback enabled for live preview during capture."))
 
         try:
@@ -1703,6 +1772,12 @@ class CapturePage(Gtk.Box):
         except Exception as exc:
             self.capture_status_label.set_text(str(exc))
             return
+
+        self._capture_monitor_uri = monitor_uri
+        if monitor_during_capture and monitor_uri:
+            self.start_preview_from_uri(monitor_uri, with_audio=bool(audio_source), preserve_watchdog_state=True)
+            if not self._preview_running:
+                self._append_capture_status_warning(_("Capture is running, but live monitor could not be started."))
 
         self.capture_start_button.set_sensitive(False)
         self.capture_stop_button.set_sensitive(True)
@@ -1743,6 +1818,11 @@ class CapturePage(Gtk.Box):
         GLib.idle_add(self._handle_capture_exit, rc)
 
     def _handle_capture_exit(self, rc: int) -> None:
+        if self._capture_monitor_uri:
+            if self._preview_running and self._preview_source_mode == "uri":
+                self.stop_preview()
+            self._capture_monitor_uri = ""
+
         self.capture_start_button.set_sensitive(True)
         self.capture_stop_button.set_sensitive(False)
         self.capture_status_label.set_text(_("Capture finished with code ") + str(rc))
@@ -1850,12 +1930,23 @@ class CapturePage(Gtk.Box):
             return False
 
         if mode == "restart":
-            self.start_preview(with_audio=True, preserve_watchdog_state=True)
+            self._restart_preview_source(with_audio=True, preserve_watchdog_state=True)
             return False
 
         self._preview_audio_fallback_reason = reason
-        self.start_preview(with_audio=False, preserve_watchdog_state=True)
+        self._restart_preview_source(with_audio=False, preserve_watchdog_state=True)
         return False
+
+    def _restart_preview_source(self, with_audio: bool, preserve_watchdog_state: bool = False) -> None:
+        if self._preview_source_mode == "uri" and self._preview_source_uri:
+            self.start_preview_from_uri(
+                self._preview_source_uri,
+                with_audio=with_audio,
+                preserve_watchdog_state=preserve_watchdog_state,
+            )
+            return
+
+        self.start_preview(with_audio=with_audio, preserve_watchdog_state=preserve_watchdog_state)
 
     def _preview_start_error_detail(self, bus) -> str:
         if bus is None:
@@ -2083,6 +2174,8 @@ class CapturePage(Gtk.Box):
         self._preview_bus_handler_id = handler_id
         self._preview_running = True
         self._preview_include_audio = include_audio_preview and self._preview_volume_element is not None
+        self._preview_source_mode = "device"
+        self._preview_source_uri = ""
 
         self.preview_start_button.set_sensitive(False)
         self.preview_stop_button.set_sensitive(True)
@@ -2090,6 +2183,138 @@ class CapturePage(Gtk.Box):
         if self._preview_include_audio:
             self._start_preview_audio_watchdog()
             self._set_preview_status(_("Live preview running."))
+        else:
+            self._stop_preview_audio_watchdog()
+            if self._preview_audio_fallback_reason:
+                self._set_preview_status(_("Live audio fallback activated (video only)."))
+            else:
+                self._set_preview_status(_("Live preview running (video only)."))
+        self._set_audio_level(0.0)
+
+        self.on_preview_audio_control_changed(self.preview_mute_check)
+
+    def start_preview_from_uri(
+        self,
+        uri: str,
+        with_audio: bool = True,
+        preserve_watchdog_state: bool = False,
+    ) -> None:
+        self.stop_preview()
+        if not preserve_watchdog_state:
+            self._preview_audio_restart_count = 0
+            self._preview_audio_fallback_reason = ""
+
+        if not GST_AVAILABLE or not GST_GTK4PAINTABLE_AVAILABLE:
+            self._set_preview_status(
+                _("Live view requires GStreamer with gtk4paintablesink. Install gstreamer1-plugins-bad-free-gtk4.")
+            )
+            return
+
+        if not uri:
+            self._set_preview_status(_("Could not start live monitor preview."))
+            return
+
+        pipeline = Gst.ElementFactory.make("playbin", "capture-monitor-preview")
+        vsink = Gst.ElementFactory.make("gtk4paintablesink", "vsink")
+        if pipeline is None or vsink is None:
+            self._set_preview_status(_("Missing GStreamer elements for video preview."))
+            return
+
+        pipeline.set_property("uri", uri)
+        pipeline.set_property("video-sink", vsink)
+
+        include_audio_preview = bool(with_audio)
+        self._preview_volume_element = None
+
+        if include_audio_preview:
+            audio_branch_issue = _("Audio preview pipeline could not be started.")
+            audio_bin = None
+            try:
+                audio_bin = Gst.parse_bin_from_description(
+                    "volume name=avolume ! level name=alevel interval=100000000 post-messages=true ! "
+                    "autoaudiosink sync=false async=false",
+                    True,
+                )
+            except Exception:
+                audio_bin = None
+
+            if audio_bin is not None:
+                try:
+                    pipeline.set_property("audio-sink", audio_bin)
+                except Exception:
+                    audio_bin = None
+
+            if audio_bin is not None:
+                volume = audio_bin.get_by_name("avolume")
+                if volume is not None:
+                    self._preview_volume_element = volume
+                else:
+                    audio_branch_issue = _("Audio preview pipeline could not be linked.")
+            else:
+                audio_branch_issue = _("Missing GStreamer elements for audio preview.")
+
+            if self._preview_volume_element is None:
+                if self._auto_fallback_enabled():
+                    self._append_capture_status_warning(_("Live audio fallback activated."))
+                    self._append_capture_log("[preview] Live audio fallback activated (capture monitor setup).")
+                    self._preview_audio_fallback_reason = audio_branch_issue
+                    try:
+                        pipeline.set_state(Gst.State.NULL)
+                    except Exception:
+                        pass
+                    self.start_preview_from_uri(uri, with_audio=False, preserve_watchdog_state=True)
+                    return
+                self._set_preview_status(audio_branch_issue)
+
+        if not include_audio_preview and pipeline.find_property("mute") is not None:
+            pipeline.set_property("mute", True)
+
+        paintable = vsink.get_property("paintable")
+        self.preview_picture.set_paintable(paintable)
+
+        bus = pipeline.get_bus()
+        if bus is None:
+            self._set_preview_status(_("Could not attach GStreamer bus."))
+            pipeline.set_state(Gst.State.NULL)
+            return
+
+        bus.add_signal_watch()
+        handler_id = bus.connect("message", self._on_preview_bus_message)
+
+        state_ret = pipeline.set_state(Gst.State.PLAYING)
+        if state_ret == Gst.StateChangeReturn.FAILURE:
+            detail = self._preview_start_error_detail(bus)
+            if handler_id:
+                bus.disconnect(handler_id)
+            bus.remove_signal_watch()
+            pipeline.set_state(Gst.State.NULL)
+            if include_audio_preview and self._auto_fallback_enabled():
+                self._append_capture_status_warning(_("Live audio fallback activated."))
+                reason = detail or _("Audio preview could not start.")
+                self._append_capture_log("[preview] Live audio fallback activated (capture monitor start). " + reason)
+                self._preview_audio_fallback_reason = reason
+                self.start_preview_from_uri(uri, with_audio=False, preserve_watchdog_state=True)
+                return
+            if detail:
+                self._set_preview_status(_("Could not start live preview: ") + detail)
+            else:
+                self._set_preview_status(_("Could not start live preview."))
+            return
+
+        self._preview_pipeline = pipeline
+        self._preview_bus = bus
+        self._preview_bus_handler_id = handler_id
+        self._preview_running = True
+        self._preview_include_audio = include_audio_preview and self._preview_volume_element is not None
+        self._preview_source_mode = "uri"
+        self._preview_source_uri = uri
+
+        self.preview_start_button.set_sensitive(False)
+        self.preview_stop_button.set_sensitive(True)
+
+        if self._preview_include_audio:
+            self._start_preview_audio_watchdog()
+            self._set_preview_status(_("Live preview running (capture stream)."))
         else:
             self._stop_preview_audio_watchdog()
             if self._preview_audio_fallback_reason:
@@ -2111,7 +2336,7 @@ class CapturePage(Gtk.Box):
                 self._append_capture_status_warning(_("Live audio fallback activated."))
                 self._append_capture_log("[preview] Live audio fallback activated (runtime error). " + error_text)
                 self._preview_audio_fallback_reason = error_text
-                self.start_preview(with_audio=False, preserve_watchdog_state=True)
+                self._restart_preview_source(with_audio=False, preserve_watchdog_state=True)
             else:
                 self._set_preview_status(_("Preview error: ") + error_text)
                 self.stop_preview()
@@ -2150,6 +2375,8 @@ class CapturePage(Gtk.Box):
         if not self._preview_running:
             self._stop_preview_audio_watchdog()
             self._preview_include_audio = False
+            self._preview_source_mode = "device"
+            self._preview_source_uri = ""
             self._set_audio_level(0.0)
             self.preview_picture.set_paintable(None)
             return
@@ -2164,6 +2391,8 @@ class CapturePage(Gtk.Box):
         self._preview_volume_element = None
         self._preview_include_audio = False
         self._preview_running = False
+        self._preview_source_mode = "device"
+        self._preview_source_uri = ""
         self._stop_preview_audio_watchdog()
 
         if bus is not None:

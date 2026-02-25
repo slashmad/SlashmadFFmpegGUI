@@ -14,11 +14,13 @@ A lightweight GTK4 GUI for FFmpeg with hardware-acceleration detection.
 - Analog source input selector (for devices that expose it), e.g. `Composite` / `S-Video`.
 - Live-during-capture policy (`Stop`, `Keep`, `Auto-fallback`) with watchdog-based audio recovery.
 - Audio cleanup presets (hum filter/cleanup) and gain controls for noisy analog captures.
+- `Keep`/`Auto-fallback` now use a single-device monitor stream during capture (preview comes from the same FFmpeg process instead of opening `/dev/video*` twice).
 
 ## VHS Capture Notes (Magix / em28xx)
 
 - For best stability on em28xx devices, use `Live during capture = Stop live view`.
 - If you want simultaneous monitoring and capture, use `Auto-fallback`; the app will fall back to video-only preview if live audio fails.
+- In `Keep`/`Auto-fallback`, the app starts capture first and then previews from an internal local UDP monitor stream, reducing V4L2 contention.
 - The app keeps default capture as raw stereo (`Channels = 2`, `Audio cleanup = Off`, `Gain = 0.0 dB`).
 - If you have analog hum/noise, enable one of the cleanup presets (`Hum 50 Hz + cleanup` is usually correct in Sweden/Europe).
 - ALSA card indices (`hw:1,0`, `hw:2,0`) can change between boots; prefer stable source names shown in the UI (`plughw:CARD=...,DEV=...`).
