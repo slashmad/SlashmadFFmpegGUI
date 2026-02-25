@@ -1004,9 +1004,8 @@ class EditPage(Gtk.Box):
         self.log_buffer.set_text("")
 
     def _append_log(self, line: str) -> bool:
-        end_iter = self.log_buffer.get_end_iter()
-        self.log_buffer.insert(end_iter, line + "\n")
-        self.log_view.scroll_to_iter(end_iter, 0.0, False, 0.0, 1.0)
+        start_iter = self.log_buffer.get_start_iter()
+        self.log_buffer.insert(start_iter, line + "\n")
         return False
 
     def _set_preview_status(self, text: str) -> None:
@@ -1022,4 +1021,3 @@ class EditPage(Gtk.Box):
     def shutdown(self) -> None:
         self.stop_preview()
         self.runner.stop()
-

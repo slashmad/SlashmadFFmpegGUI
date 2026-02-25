@@ -1975,9 +1975,8 @@ class CapturePage(Gtk.Box):
         self.capture_log_buffer.set_text("")
 
     def _append_capture_log(self, line: str) -> bool:
-        end_iter = self.capture_log_buffer.get_end_iter()
-        self.capture_log_buffer.insert(end_iter, line + "\n")
-        self.capture_log_view.scroll_to_iter(end_iter, 0.0, False, 0.0, 1.0)
+        start_iter = self.capture_log_buffer.get_start_iter()
+        self.capture_log_buffer.insert(start_iter, line + "\n")
         return False
 
     def on_preview_start_clicked(self, _button: Gtk.Button) -> None:

@@ -1143,10 +1143,9 @@ class MainWindow(Gtk.ApplicationWindow):
     def _clear_log(self) -> None:
         self.log_buffer.set_text("")
 
-    def _append_log(self, line: str) -> None:
-        end_iter = self.log_buffer.get_end_iter()
-        self.log_buffer.insert(end_iter, line + "\n")
-        self.log_view.scroll_to_iter(end_iter, 0.0, False, 0.0, 1.0)
+    def _append_log(self, line: str) -> bool:
+        start_iter = self.log_buffer.get_start_iter()
+        self.log_buffer.insert(start_iter, line + "\n")
         return False
 
     def on_close_request(self, _window: Gtk.ApplicationWindow) -> bool:
