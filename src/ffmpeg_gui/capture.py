@@ -1859,7 +1859,7 @@ class CapturePage(Gtk.Box):
 
         preview_was_running = self._preview_running
         live_policy = self._live_during_capture_policy()
-        monitor_during_capture = preview_was_running and live_policy in {"keep", "auto"}
+        monitor_stream_enabled = live_policy in {"keep", "auto"}
 
         if preview_was_running:
             self.stop_preview()
@@ -1874,7 +1874,7 @@ class CapturePage(Gtk.Box):
 
         monitor_port: int | None = None
         monitor_uri = ""
-        if monitor_during_capture:
+        if monitor_stream_enabled:
             monitor_port = _pick_free_udp_port()
             monitor_uri = f"udp://127.0.0.1:{monitor_port}"
 
@@ -1904,11 +1904,15 @@ class CapturePage(Gtk.Box):
             self.capture_status_label.set_text("\n".join(warnings))
         if preview_was_running and live_policy == "stop":
             self._append_capture_status_warning(_("Live view was stopped automatically during capture."))
-        if monitor_during_capture:
+        if monitor_stream_enabled and preview_was_running:
             self._append_capture_status_warning(
                 _("Live view switched to capture monitor stream (single-device mode).")
             )
-        if monitor_during_capture and live_policy == "auto":
+        if monitor_stream_enabled and not preview_was_running:
+            self._append_capture_status_warning(
+                _("Live monitor stream is ready. Start live view during capture if needed.")
+            )
+        if monitor_stream_enabled and live_policy == "auto":
             self._append_capture_status_warning(_("Auto-fallback enabled for live preview during capture."))
 
         try:
@@ -1918,7 +1922,7 @@ class CapturePage(Gtk.Box):
             return
 
         self._capture_monitor_uri = monitor_uri
-        if monitor_during_capture and monitor_uri:
+        if preview_was_running and monitor_uri:
             self.start_preview_from_uri(monitor_uri, with_audio=bool(audio_source), preserve_watchdog_state=True)
             if not self._preview_running:
                 self._append_capture_status_warning(_("Capture is running, but live monitor could not be started."))
@@ -1980,6 +1984,21 @@ class CapturePage(Gtk.Box):
         return False
 
     def on_preview_start_clicked(self, _button: Gtk.Button) -> None:
+        if self.capture_runner.running:
+            if self._capture_monitor_uri:
+                audio_source = self.audio_source_combo.get_active_id() or ""
+                self.start_preview_from_uri(
+                    self._capture_monitor_uri,
+                    with_audio=bool(audio_source),
+                    preserve_watchdog_state=True,
+                )
+                return
+
+            self._set_preview_status(
+                _("Live view during capture requires policy Keep or Auto-fallback before capture start.")
+            )
+            return
+
         self.start_preview()
 
     def on_preview_stop_clicked(self, _button: Gtk.Button) -> None:
