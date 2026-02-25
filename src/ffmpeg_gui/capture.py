@@ -1817,10 +1817,6 @@ class CapturePage(Gtk.Box):
                 "yuv420p",
                 "-b:v",
                 "2M",
-                "-maxrate",
-                "2M",
-                "-bufsize",
-                "1M",
                 "-g",
                 "25",
                 "-bf",
@@ -1859,7 +1855,9 @@ class CapturePage(Gtk.Box):
 
         preview_was_running = self._preview_running
         live_policy = self._live_during_capture_policy()
-        monitor_stream_enabled = live_policy in {"keep", "auto"}
+        # Keep single-device monitor only when preview is active at capture start.
+        # If preview is off, avoid paying the extra encode cost.
+        monitor_stream_enabled = preview_was_running and live_policy in {"keep", "auto"}
 
         if preview_was_running:
             self.stop_preview()
@@ -1907,10 +1905,6 @@ class CapturePage(Gtk.Box):
         if monitor_stream_enabled and preview_was_running:
             self._append_capture_status_warning(
                 _("Live view switched to capture monitor stream (single-device mode).")
-            )
-        if monitor_stream_enabled and not preview_was_running:
-            self._append_capture_status_warning(
-                _("Live monitor stream is ready. Start live view during capture if needed.")
             )
         if monitor_stream_enabled and live_policy == "auto":
             self._append_capture_status_warning(_("Auto-fallback enabled for live preview during capture."))
