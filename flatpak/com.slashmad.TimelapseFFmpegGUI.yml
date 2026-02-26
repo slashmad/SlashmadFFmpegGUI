@@ -15,10 +15,11 @@ modules:
     buildsystem: simple
     build-commands:
       - pip3 install --prefix=/app --no-deps --no-build-isolation .
-      - install -D data/com.slashmad.TimelapseFFmpegGUI.desktop /app/share/applications/com.slashmad.TimelapseFFmpegGUI.desktop
-      - install -D data/com.slashmad.TimelapseFFmpegGUI.metainfo.xml /app/share/metainfo/com.slashmad.TimelapseFFmpegGUI.metainfo.xml
-      - install -D data/icons/hicolor/scalable/apps/com.slashmad.TimelapseFFmpegGUI.svg /app/share/icons/hicolor/scalable/apps/com.slashmad.TimelapseFFmpegGUI.svg
-      - install -D README.md /app/share/doc/ffmpeg-gui/README.md
+      - mkdir -p /app/share/applications /app/share/metainfo /app/share/icons/hicolor/scalable/apps /app/share/doc/ffmpeg-gui
+      - cp data/com.slashmad.TimelapseFFmpegGUI.desktop /app/share/applications/com.slashmad.TimelapseFFmpegGUI.desktop
+      - cp data/com.slashmad.TimelapseFFmpegGUI.metainfo.xml /app/share/metainfo/com.slashmad.TimelapseFFmpegGUI.metainfo.xml
+      - cp data/icons/hicolor/scalable/apps/com.slashmad.TimelapseFFmpegGUI.svg /app/share/icons/hicolor/scalable/apps/com.slashmad.TimelapseFFmpegGUI.svg
+      - cp README.md /app/share/doc/ffmpeg-gui/README.md
     sources:
       - type: dir
         path: ..
