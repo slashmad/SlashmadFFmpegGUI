@@ -4,6 +4,7 @@ runtime-version: "48"
 sdk: org.gnome.Sdk
 command: ffmpeg-gui
 finish-args:
+  - --share=network
   - --share=ipc
   - --socket=fallback-x11
   - --socket=wayland

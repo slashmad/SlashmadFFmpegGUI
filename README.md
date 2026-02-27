@@ -125,6 +125,7 @@ Notes:
 - Capture device/source discovery (`v4l2-ctl`, `pactl`, `arecord`) is executed on host via `flatpak-spawn --host` when running inside Flatpak.
 - If you prefer bundling FFmpeg, update the manifest to include a module for it.
 - The included Flatpak manifest grants device/media access needed for capture workflows:
+  - `--share=network` (required for internal UDP live-monitor stream during capture when FFmpeg runs on host)
   - `--device=all` (USB/V4L2 access)
   - `--filesystem=/run/udev:ro` (device discovery)
   - `--socket=pulseaudio` (audio source/sink access)
