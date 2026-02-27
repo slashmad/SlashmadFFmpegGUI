@@ -182,10 +182,17 @@ MAGIX_USB_VENDOR_ID = "1b80"
 MAGIX_USB_PRODUCT_ID = "e349"
 
 
+def _is_flatpak() -> bool:
+    return bool(os.environ.get("FLATPAK_ID") or os.environ.get("FLATPAK_SANDBOX_DIR"))
+
+
 def _run_command(args: list[str], timeout: float = 8.0) -> tuple[int, str, str]:
+    cmd = list(args)
+    if _is_flatpak():
+        cmd = ["flatpak-spawn", "--host"] + cmd
     try:
         proc = subprocess.run(
-            args,
+            cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
@@ -194,7 +201,7 @@ def _run_command(args: list[str], timeout: float = 8.0) -> tuple[int, str, str]:
         )
         return proc.returncode, (proc.stdout or "").strip(), (proc.stderr or "").strip()
     except FileNotFoundError:
-        return 127, "", _("Command not found: ") + args[0]
+        return 127, "", _("Command not found: ") + cmd[0]
     except subprocess.TimeoutExpired:
         return 124, "", _("Command timed out")
 

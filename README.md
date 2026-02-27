@@ -122,7 +122,13 @@ flatpak-builder --run build flatpak/com.slashmad.TimelapseFFmpegGUI.yml ffmpeg-g
 
 Notes:
 - The app calls `ffmpeg` to detect available hardware acceleration. In Flatpak it tries to run host `ffmpeg` via `flatpak-spawn --host`.
+- Capture device/source discovery (`v4l2-ctl`, `pactl`, `arecord`) is executed on host via `flatpak-spawn --host` when running inside Flatpak.
 - If you prefer bundling FFmpeg, update the manifest to include a module for it.
+- The included Flatpak manifest grants device/media access needed for capture workflows:
+  - `--device=all` (USB/V4L2 access)
+  - `--filesystem=/run/udev:ro` (device discovery)
+  - `--socket=pulseaudio` (audio source/sink access)
+  - `--filesystem=/mnt` (common mounted/NFS storage path)
 
 ### Theme In Flatpak
 
