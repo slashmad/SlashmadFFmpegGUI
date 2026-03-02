@@ -2,13 +2,6 @@
 
 GTK4 frontend for FFmpeg maintained by `slashmad`, focused on capture, review, trimming, cleanup, and export workflows.
 
-Search-friendly description:
-- Linux VHS capture GUI
-- Magix USB capture on Linux
-- USB to VHS capture Linux workflow
-- VHS digitizing on Linux with FFmpeg
-- Analog video capture, S-Video capture, and Composite capture on Linux
-
 Repository:
 `https://github.com/slashmad/SlashmadFFmpegGUI`
 
