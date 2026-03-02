@@ -10,7 +10,7 @@ License:
 
 ## Features
 
-- FFmpeg encode workflow with hardware-acceleration detection.
+- FFmpeg encode (`Timelapse`) workflow with hardware-acceleration detection.
 - Dedicated `Capture` tab for VHS, USB, PCI, and PCIe capture devices.
 - Dedicated `Edit` tab with in-app playback, trim controls, frame stepping, and export.
 - Live video and live audio monitoring with independent mute and volume control.
