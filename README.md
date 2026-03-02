@@ -19,21 +19,6 @@ License:
 - Explicit FFmpeg command preview for capture and export jobs.
 - Flatpak support with host-device discovery via `flatpak-spawn --host`.
 
-## Search Terms
-
-This project is intended to be discoverable for common Linux video digitizing searches, including:
-
-- `Magix capture Linux`
-- `Magix USB Videowandler Linux`
-- `USB to VHS capture Linux`
-- `VHS capture Linux`
-- `VHS digitizing Linux`
-- `S-Video capture Linux`
-- `Composite capture Linux`
-- `analog video capture Linux`
-- `FFmpeg VHS capture GUI`
-- `Linux USB video capture GUI`
-
 ## Edit Workflow Notes
 
 - Load a captured file in `Edit`.
@@ -163,3 +148,20 @@ Reset the override:
 ```bash
 flatpak override --user --reset com.slashmad.SlashmadFFmpegGUI
 ```
+
+## Search Terms
+
+This project is intended to be discoverable for common Linux video digitizing and timelapse searches, including:
+
+- `Timelapse Linux`
+- `Magix capture Linux`
+- `Magix USB Videowandler Linux`
+- `USB to VHS capture Linux`
+- `PCI / PCI-e to VHS catpure Linux`
+- `VHS capture Linux`
+- `VHS digitizing Linux`
+- `S-Video capture Linux`
+- `Composite capture Linux`
+- `analog video capture Linux`
+- `FFmpeg VHS capture GUI`
+- `Linux USB video capture GUI`
