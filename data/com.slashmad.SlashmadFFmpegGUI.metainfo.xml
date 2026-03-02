@@ -9,10 +9,21 @@
   <url type="homepage">https://github.com/slashmad/SlashmadFFmpegGUI</url>
   <url type="bugtracker">https://github.com/slashmad/SlashmadFFmpegGUI/issues</url>
   <url type="vcs-browser">https://github.com/slashmad/SlashmadFFmpegGUI</url>
+  <keywords>
+    <keyword>FFmpeg</keyword>
+    <keyword>Linux capture</keyword>
+    <keyword>VHS capture</keyword>
+    <keyword>Magix capture</keyword>
+    <keyword>USB video capture</keyword>
+    <keyword>Analog video digitizing</keyword>
+    <keyword>S-Video capture</keyword>
+    <keyword>Composite capture</keyword>
+  </keywords>
   <description>
-    <p>Slashmad FFmpeg GUI is a GTK4 desktop frontend for FFmpeg focused on analog capture, post-capture cleanup, and controlled exports.</p>
+    <p>Slashmad FFmpeg GUI is a GTK4 desktop frontend for FFmpeg focused on Linux analog capture, VHS digitizing, post-capture cleanup, and controlled exports.</p>
     <ul>
       <li>Capture VHS and other analog sources from USB, PCI, and PCIe hardware.</li>
+      <li>Use Magix USB capture devices on Linux for USB-to-VHS and VHS-to-digital workflows.</li>
       <li>Monitor live video and audio, then trim and inspect files inside the app.</li>
       <li>Export archive, delivery, or proxy outputs with explicit FFmpeg settings.</li>
       <li>Review hardware acceleration support and exact generated FFmpeg commands.</li>

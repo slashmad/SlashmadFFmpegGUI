@@ -147,6 +147,8 @@ class MainWindow(Gtk.ApplicationWindow):
     def _load_readme_text(self) -> str:
         candidates = [
             os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "README.md")),
+            "/app/share/doc/slashmad-ffmpeg-gui/README.md",
+            "/usr/share/doc/slashmad-ffmpeg-gui/README.md",
             "/app/share/doc/ffmpeg-gui/README.md",
             "/usr/share/doc/ffmpeg-gui/README.md",
             os.path.join(os.getcwd(), "README.md"),
