@@ -1,4 +1,4 @@
-app-id: com.slashmad.SlashmadFFmpegGUI
+app-id: io.github.slashmad.SlashmadFFmpegGUI
 runtime: org.gnome.Platform
 runtime-version: "48"
 sdk: org.gnome.Sdk
@@ -23,9 +23,9 @@ modules:
     build-commands:
       - pip3 install --prefix=/app --no-deps --no-build-isolation .
       - mkdir -p /app/share/applications /app/share/metainfo /app/share/icons/hicolor/scalable/apps /app/share/doc/slashmad-ffmpeg-gui
-      - cp data/com.slashmad.SlashmadFFmpegGUI.desktop /app/share/applications/com.slashmad.SlashmadFFmpegGUI.desktop
-      - cp data/com.slashmad.SlashmadFFmpegGUI.metainfo.xml /app/share/metainfo/com.slashmad.SlashmadFFmpegGUI.metainfo.xml
-      - cp data/icons/hicolor/scalable/apps/com.slashmad.SlashmadFFmpegGUI.svg /app/share/icons/hicolor/scalable/apps/com.slashmad.SlashmadFFmpegGUI.svg
+      - cp data/io.github.slashmad.SlashmadFFmpegGUI.desktop /app/share/applications/io.github.slashmad.SlashmadFFmpegGUI.desktop
+      - cp data/io.github.slashmad.SlashmadFFmpegGUI.metainfo.xml /app/share/metainfo/io.github.slashmad.SlashmadFFmpegGUI.metainfo.xml
+      - cp data/icons/hicolor/scalable/apps/io.github.slashmad.SlashmadFFmpegGUI.svg /app/share/icons/hicolor/scalable/apps/io.github.slashmad.SlashmadFFmpegGUI.svg
       - cp README.md /app/share/doc/slashmad-ffmpeg-gui/README.md
       - cp LICENSE /app/share/doc/slashmad-ffmpeg-gui/LICENSE
     sources:

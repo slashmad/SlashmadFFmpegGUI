@@ -1,13 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>com.slashmad.SlashmadFFmpegGUI</id>
+  <id>io.github.slashmad.SlashmadFFmpegGUI</id>
   <name>Slashmad FFmpeg GUI</name>
   <summary>GTK4 FFmpeg capture, editing, and encoding workflow for slashmad</summary>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
-  <developer_name>slashmad</developer_name>
+  <developer id="io.github.slashmad">
+    <name>slashmad</name>
+  </developer>
   <url type="homepage">https://github.com/slashmad/SlashmadFFmpegGUI</url>
   <url type="bugtracker">https://github.com/slashmad/SlashmadFFmpegGUI/issues</url>
+  <url type="contact">https://github.com/slashmad/SlashmadFFmpegGUI/issues</url>
   <url type="vcs-browser">https://github.com/slashmad/SlashmadFFmpegGUI</url>
   <keywords>
     <keyword>FFmpeg</keyword>
@@ -31,15 +34,25 @@
   </description>
   <screenshots>
     <screenshot type="default">
-      <image width="1689" height="1558">https://raw.githubusercontent.com/slashmad/SlashmadFFmpegGUI/main/data/screenshots/encode.png</image>
+      <image width="1684" height="1614">https://raw.githubusercontent.com/slashmad/SlashmadFFmpegGUI/v0.2.3/data/screenshots/02capture.png</image>
+      <caption>Capture workflow for VHS and analog sources with live preview and archive-oriented defaults.</caption>
     </screenshot>
     <screenshot>
-      <image width="1689" height="1558">https://raw.githubusercontent.com/slashmad/SlashmadFFmpegGUI/main/data/screenshots/hardware.png</image>
+      <image width="1677" height="1599">https://raw.githubusercontent.com/slashmad/SlashmadFFmpegGUI/v0.2.3/data/screenshots/01timelapse.png</image>
+      <caption>Timelapse workflow with compact dark controls and inline log output.</caption>
+    </screenshot>
+    <screenshot>
+      <image width="1677" height="1599">https://raw.githubusercontent.com/slashmad/SlashmadFFmpegGUI/v0.2.3/data/screenshots/03edit.png</image>
+      <caption>Edit workflow with playback, frame-accurate trim controls, and export corrections.</caption>
+    </screenshot>
+    <screenshot>
+      <image width="1677" height="1599">https://raw.githubusercontent.com/slashmad/SlashmadFFmpegGUI/v0.2.3/data/screenshots/04hardware.png</image>
+      <caption>Hardware acceleration overview for FFmpeg encoders and GPU capabilities.</caption>
     </screenshot>
   </screenshots>
   <releases>
-    <release version="0.2.2" date="2026-03-02" />
+    <release version="0.2.3" date="2026-03-02" />
   </releases>
-  <launchable type="desktop-id">com.slashmad.SlashmadFFmpegGUI.desktop</launchable>
+  <launchable type="desktop-id">io.github.slashmad.SlashmadFFmpegGUI.desktop</launchable>
   <content_rating type="oars-1.1" />
 </component>

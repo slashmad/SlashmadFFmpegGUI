@@ -22,7 +22,7 @@ def main() -> None:
     os.environ.setdefault("GSK_RENDERER", "ngl")
 
     setup_gettext()
-    app = Gtk.Application(application_id="com.slashmad.SlashmadFFmpegGUI")
+    app = Gtk.Application(application_id="io.github.slashmad.SlashmadFFmpegGUI")
     app.connect("activate", _on_activate)
     app.run()
 

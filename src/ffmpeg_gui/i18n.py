@@ -5,7 +5,7 @@ import locale
 import os
 
 
-APP_ID = "com.slashmad.SlashmadFFmpegGUI"
+APP_ID = "io.github.slashmad.SlashmadFFmpegGUI"
 
 
 def setup_gettext() -> None:

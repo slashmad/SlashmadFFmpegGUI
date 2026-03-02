@@ -125,8 +125,8 @@ slashmad-ffmpeg-gui
 Build and run with Flatpak Builder:
 
 ```bash
-flatpak-builder --force-clean --install-deps-from=flathub --user build flatpak/com.slashmad.SlashmadFFmpegGUI.yml
-flatpak-builder --run build flatpak/com.slashmad.SlashmadFFmpegGUI.yml slashmad-ffmpeg-gui
+flatpak-builder --force-clean --install-deps-from=flathub --user build flatpak/io.github.slashmad.SlashmadFFmpegGUI.yml
+flatpak-builder --run build flatpak/io.github.slashmad.SlashmadFFmpegGUI.yml slashmad-ffmpeg-gui
 ```
 
 Notes:
