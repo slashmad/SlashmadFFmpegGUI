@@ -32,10 +32,7 @@ License:
 
 - Load a captured file in `Edit`.
 - Use the built-in player transport (`Play`, `Pause`, seek timeline) to inspect the source.
-- `Left` / `Right` steps backward or forward by one frame in preview.
-- `Shift+Left` / `Shift+Right` jumps one second.
 - The trim bar uses one combined range with `start` and `end` handles.
-- Click a trim handle and use arrow keys to nudge that specific handle.
 - Use the dedicated `-1f` / `+1f` buttons under the trim bar for manual frame-accurate start/end adjustment.
 - Default export mode is `Keep source streams`, which trims/remuxes without re-encoding.
 - Switch to `Re-encode` when applying denoise, deinterlace, color correction, sync changes, or new codecs.

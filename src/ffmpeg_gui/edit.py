@@ -1046,21 +1046,10 @@ class EditPage(Gtk.Box):
         self._seek_preview(target)
         self.preview_position_label.set_text(_format_time_label(target))
 
-    def on_preview_key_pressed(self, _controller, keyval, _keycode, state) -> bool:
-        jump_seconds = 1.0 if (state & Gdk.ModifierType.SHIFT_MASK) else None
-        if self.trim_range_bar.has_focus() and self.trim_range_bar.has_selected_handle():
-            if keyval == Gdk.KEY_Left:
-                return self._nudge_trim_handle(self.trim_range_bar.get_selected_handle(), -1, jump_seconds)
-            if keyval == Gdk.KEY_Right:
-                return self._nudge_trim_handle(self.trim_range_bar.get_selected_handle(), 1, jump_seconds)
-
+    def on_preview_key_pressed(self, _controller, keyval, _keycode, _state) -> bool:
         if not self._preview_running:
             return False
 
-        if keyval == Gdk.KEY_Left:
-            return self._step_preview(-1, jump_seconds)
-        if keyval == Gdk.KEY_Right:
-            return self._step_preview(1, jump_seconds)
         if keyval == Gdk.KEY_space:
             if self._preview_paused:
                 self.start_preview()
