@@ -37,6 +37,9 @@
       <image width="1689" height="1558">https://raw.githubusercontent.com/slashmad/SlashmadFFmpegGUI/main/data/screenshots/hardware.png</image>
     </screenshot>
   </screenshots>
+  <releases>
+    <release version="0.2.2" date="2026-03-02" />
+  </releases>
   <launchable type="desktop-id">com.slashmad.SlashmadFFmpegGUI.desktop</launchable>
   <content_rating type="oars-1.1" />
 </component>

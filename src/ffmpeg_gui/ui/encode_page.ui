@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <object class="GtkScrolledWindow" id="encode_page_root">
+    <property name="hscrollbar-policy">automatic</property>
+    <property name="vscrollbar-policy">automatic</property>
+    <child>
+      <object class="GtkBox">
+        <property name="orientation">vertical</property>
+        <property name="spacing">5</property>
+        <property name="margin-top">5</property>
+        <property name="margin-bottom">5</property>
+        <property name="margin-start">5</property>
+        <property name="margin-end">5</property>
+        <child>
+          <object class="GtkBox">
+            <property name="orientation">horizontal</property>
+            <property name="spacing">5</property>
+            <property name="hexpand">True</property>
+            <property name="valign">start</property>
+            <child>
+              <object class="GtkFrame">
+                <property name="label">Inputs</property>
+                <property name="hexpand">True</property>
+                <property name="valign">start</property>
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">vertical</property>
+                    <property name="spacing">5</property>
+                    <property name="margin-top">5</property>
+                    <property name="margin-bottom">5</property>
+                    <property name="margin-start">5</property>
+                    <property name="margin-end">5</property>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">5</property>
+                        <child><object class="GtkEntry" id="path_entry"><property name="placeholder-text">Paste a file or folder path</property><property name="hexpand">True</property></object></child>
+                        <child><object class="GtkButton" id="add_path_button"><property name="label">Add</property></object></child>
+                        <child><object class="GtkButton" id="add_files_button"><property name="label">Add Files</property></object></child>
+                        <child><object class="GtkButton" id="add_folder_button"><property name="label">Add Folder</property></object></child>
+                        <child><object class="GtkButton" id="clear_button"><property name="label">Clear</property></object></child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkScrolledWindow">
+                        <property name="height-request">48</property>
+                        <property name="vexpand">False</property>
+                        <property name="propagate-natural-height">True</property>
+                        <child><object class="GtkListBox" id="input_list"><property name="selection-mode">none</property></object></child>
+                      </object>
+                    </child>
+                    <child><object class="GtkLabel" id="input_status"><property name="label">No inputs yet.</property><property name="xalign">0</property></object></child>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkFrame">
+                <property name="label">Output</property>
+                <property name="hexpand">True</property>
+                <property name="valign">start</property>
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">vertical</property>
+                    <property name="spacing">5</property>
+                    <property name="margin-top">5</property>
+                    <property name="margin-bottom">5</property>
+                    <property name="margin-start">5</property>
+                    <property name="margin-end">5</property>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">5</property>
+                        <child><object class="GtkEntry" id="output_entry"><property name="placeholder-text">Output file path</property><property name="hexpand">True</property></object></child>
+                        <child><object class="GtkButton" id="choose_output_button"><property name="label">Choose Output</property></object></child>
+                      </object>
+                    </child>
+                    <child><object class="GtkLabel" id="output_hint"><property name="label">Default is the same folder as your images.</property><property name="xalign">0</property><property name="wrap">True</property></object></child>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkFrame">
+            <property name="label">Settings</property>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <property name="spacing">5</property>
+                <property name="margin-top">5</property>
+                <property name="margin-bottom">5</property>
+                <property name="margin-start">5</property>
+                <property name="margin-end">5</property>
+                <child><object class="GtkBox"><property name="orientation">horizontal</property><property name="spacing">5</property><child><object class="GtkLabel"><property name="label">Video codec</property><property name="xalign">0</property><property name="width-request">110</property></object></child><child><object class="GtkComboBoxText" id="codec_combo"><property name="width-request">230</property></object></child><child><object class="GtkCheckButton" id="show_all_check"><property name="label">Show unusable codecs</property></object></child></object></child>
+                <child><object class="GtkLabel" id="codec_info_label"><property name="label">Select a codec to see details.</property><property name="xalign">0</property><property name="wrap">True</property><style><class name="dim-label"/></style></object></child>
+                <child><object class="GtkBox"><property name="orientation">horizontal</property><property name="spacing">5</property><child><object class="GtkLabel"><property name="label">Quality (CRF/CQ)</property><property name="xalign">0</property><property name="width-request">110</property></object></child><child><object class="GtkSpinButton" id="quality_spin"><property name="width-request">90</property><property name="adjustment"><object class="GtkAdjustment"><property name="lower">0</property><property name="upper">51</property><property name="step-increment">1</property><property name="page-increment">1</property><property name="value">18</property></object></property></object></child><child><object class="GtkCheckButton" id="quality_check"><property name="label">Enable</property><property name="active">True</property></object></child></object></child>
+                <child><object class="GtkLabel"><property name="label">Uses -crf for x264/x265/AV1/VP9 and -cq for NVENC.</property><property name="xalign">0</property><style><class name="dim-label"/></style></object></child>
+                <child><object class="GtkBox"><property name="orientation">horizontal</property><property name="spacing">5</property><child><object class="GtkLabel"><property name="label">Preset</property><property name="xalign">0</property><property name="width-request">110</property></object></child><child><object class="GtkComboBoxText" id="preset_combo"><property name="width-request">160</property></object></child><child><object class="GtkLabel"><property name="label">Tune</property></object></child><child><object class="GtkEntry" id="tune_entry"><property name="placeholder-text">e.g. film, grain</property><property name="hexpand">True</property></object></child></object></child>
+                <child><object class="GtkBox"><property name="orientation">horizontal</property><property name="spacing">5</property><child><object class="GtkLabel"><property name="label">Pixel format</property><property name="xalign">0</property><property name="width-request">110</property></object></child><child><object class="GtkComboBoxText" id="pix_combo"><property name="width-request">170</property></object></child><child><object class="GtkLabel"><property name="label">Output FPS</property></object></child><child><object class="GtkSpinButton" id="fps_spin"><property name="width-request">95</property><property name="adjustment"><object class="GtkAdjustment"><property name="lower">1</property><property name="upper">240</property><property name="step-increment">1</property><property name="page-increment">1</property><property name="value">25</property></object></property></object></child></object></child>
+                <child><object class="GtkLabel"><property name="label">Timelapse output uses the FPS you set here.</property><property name="xalign">0</property><style><class name="dim-label"/></style></object></child>
+                <child><object class="GtkBox"><property name="orientation">horizontal</property><property name="spacing">5</property><child><object class="GtkLabel"><property name="label">Extra ffmpeg args</property><property name="xalign">0</property><property name="width-request">110</property></object></child><child><object class="GtkEntry" id="extra_entry"><property name="placeholder-text">e.g. -crf 18 -preset slow</property><property name="hexpand">True</property></object></child></object></child>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkFrame">
+            <property name="label">Command preview</property>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <property name="spacing">5</property>
+                <property name="margin-top">5</property>
+                <property name="margin-bottom">5</property>
+                <property name="margin-start">5</property>
+                <property name="margin-end">5</property>
+                <child><object class="GtkScrolledWindow"><property name="min-content-height">80</property><child><object class="GtkTextView" id="command_view"><property name="editable">False</property><property name="monospace">True</property></object></child></object></child>
+                <child><object class="GtkBox"><property name="orientation">horizontal</property><property name="spacing">5</property><child><object class="GtkButton" id="start_button"><property name="label">Start</property></object></child><child><object class="GtkButton" id="stop_button"><property name="label">Stop</property><property name="sensitive">False</property></object></child></object></child>
+                <child><object class="GtkLabel" id="encode_status"><property name="xalign">0</property></object></child>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkExpander" id="log_expander">
+            <property name="label">Log</property>
+            <property name="expanded">True</property>
+            <property name="vexpand">True</property>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <property name="spacing">5</property>
+                <property name="margin-top">5</property>
+                <property name="margin-bottom">5</property>
+                <property name="margin-start">5</property>
+                <property name="margin-end">5</property>
+                <child><object class="GtkScrolledWindow"><property name="vexpand">True</property><property name="min-content-height">105</property><child><object class="GtkTextView" id="log_view"><property name="editable">False</property><property name="monospace">True</property></object></child></object></child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

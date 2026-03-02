@@ -17,6 +17,7 @@ from gi.repository import GLib, Gio, Gtk
 from ffmpeg_gui.ffmpeg import EncoderInfo, PixelFormat
 from ffmpeg_gui.i18n import _
 from ffmpeg_gui.runner import FFmpegRunner
+from ffmpeg_gui.ui import bind_objects, compact_widget, load_builder, require_object
 
 GST_AVAILABLE = False
 GST_GTK4PAINTABLE_AVAILABLE = False
@@ -668,11 +669,11 @@ def _prepare_v4l2_video_input(video_device: str, input_id: str) -> list[str]:
 
 class CapturePage(Gtk.Box):
     def __init__(self) -> None:
-        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-        self.set_margin_top(12)
-        self.set_margin_bottom(12)
-        self.set_margin_start(12)
-        self.set_margin_end(12)
+        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=5)
+        self.set_margin_top(5)
+        self.set_margin_bottom(5)
+        self.set_margin_start(5)
+        self.set_margin_end(5)
 
         self._ffmpeg_command: list[str] | None = None
         self._encoders: list[EncoderInfo] = []
@@ -707,481 +708,179 @@ class CapturePage(Gtk.Box):
         self._set_default_output_path()
 
     def _build_ui(self) -> None:
-        info_frame = Gtk.Frame(label=_("Capture Status"))
-        info_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        info_box.set_margin_top(8)
-        info_box.set_margin_bottom(8)
-        info_box.set_margin_start(8)
-        info_box.set_margin_end(8)
-        info_frame.set_child(info_box)
-        self.append(info_frame)
+        builder = load_builder("capture_page.ui")
+        bind_objects(
+            self,
+            builder,
+            [
+                "capture_info_label",
+                "profile_combo",
+                "profile_info_label",
+                "video_device_combo",
+                "video_input_combo",
+                "device_hint_label",
+                "audio_source_combo",
+                "audio_backend_combo",
+                "video_format_combo",
+                "video_size_combo",
+                "video_size_entry",
+                "video_standard_combo",
+                "use_libv4l2_check",
+                "preview_picture",
+                "preview_start_button",
+                "preview_stop_button",
+                "preview_mute_check",
+                "preview_volume_scale",
+                "live_during_capture_combo",
+                "preview_level_bar",
+                "preview_status_label",
+                "output_entry",
+                "container_combo",
+                "show_all_capture_codecs",
+                "capture_video_codec_combo",
+                "capture_video_bitrate_entry",
+                "capture_preset_combo",
+                "capture_tune_entry",
+                "capture_audio_codec_combo",
+                "capture_audio_bitrate_entry",
+                "sample_rate_spin",
+                "channels_combo",
+                "audio_filter_combo",
+                "audio_gain_spin",
+                "capture_pixfmt_combo",
+                "match_fps_check",
+                "output_fps_spin",
+                "deinterlace_check",
+                "capture_extra_entry",
+                "capture_start_button",
+                "capture_stop_button",
+                "capture_status_label",
+                "capture_log_view",
+            ],
+        )
 
-        self.capture_info_label = Gtk.Label(label=_("Waiting for FFmpeg capability scan..."))
-        self.capture_info_label.set_xalign(0)
-        self.capture_info_label.add_css_class("dim-label")
-        info_box.append(self.capture_info_label)
+        self.append(require_object(builder, "capture_page_root"))
 
-        io_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-        io_row.set_hexpand(True)
-        self.append(io_row)
+        apply_profile_button = require_object(builder, "apply_profile_button")
+        refresh_devices_button = require_object(builder, "refresh_devices_button")
+        output_browse = require_object(builder, "output_browse_button")
 
-        input_frame = Gtk.Frame(label=_("Input & Source"))
-        input_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        input_box.set_margin_top(8)
-        input_box.set_margin_bottom(8)
-        input_box.set_margin_start(8)
-        input_box.set_margin_end(8)
-        input_frame.set_child(input_box)
-        input_frame.set_hexpand(True)
-        io_row.append(input_frame)
+        self.capture_command_buffer = Gtk.TextBuffer()
+        self.capture_log_buffer = self.capture_log_view.get_buffer()
 
-        profile_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        input_box.append(profile_row)
-
-        profile_label = Gtk.Label(label=_("Profile"))
-        profile_label.set_size_request(120, -1)
-        profile_label.set_xalign(0)
-        profile_row.append(profile_label)
-
-        self.profile_combo = Gtk.ComboBoxText()
-        self.profile_combo.set_hexpand(True)
-        profile_row.append(self.profile_combo)
-
-        apply_profile_button = Gtk.Button(label=_("Apply"))
         apply_profile_button.connect("clicked", self.on_apply_profile_clicked)
-        profile_row.append(apply_profile_button)
-
-        self.profile_info_label = Gtk.Label(label="")
-        self.profile_info_label.set_xalign(0)
-        self.profile_info_label.set_wrap(True)
-        self.profile_info_label.add_css_class("dim-label")
-        input_box.append(self.profile_info_label)
-
-        video_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        input_box.append(video_row)
-
-        video_label = Gtk.Label(label=_("Video device"))
-        video_label.set_size_request(120, -1)
-        video_label.set_xalign(0)
-        video_row.append(video_label)
-
-        self.video_device_combo = Gtk.ComboBoxText()
-        self.video_device_combo.set_hexpand(True)
         self.video_device_combo.connect("changed", self.on_video_device_changed)
-        video_row.append(self.video_device_combo)
-
-        refresh_devices_button = Gtk.Button(label=_("Refresh"))
         refresh_devices_button.set_tooltip_text(_("Rescan video and audio devices"))
         refresh_devices_button.connect("clicked", self.on_refresh_devices_clicked)
-        video_row.append(refresh_devices_button)
-
-        source_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        input_box.append(source_row)
-
-        source_label = Gtk.Label(label=_("Video input"))
-        source_label.set_size_request(120, -1)
-        source_label.set_xalign(0)
-        source_row.append(source_label)
-
-        self.video_input_combo = Gtk.ComboBoxText()
-        self.video_input_combo.set_hexpand(True)
         self.video_input_combo.connect("changed", self.on_capture_settings_changed)
-        source_row.append(self.video_input_combo)
-
-        self.device_hint_label = Gtk.Label(label="")
-        self.device_hint_label.set_xalign(0)
-        self.device_hint_label.set_wrap(True)
-        self.device_hint_label.add_css_class("dim-label")
-        input_box.append(self.device_hint_label)
-
-        audio_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        input_box.append(audio_row)
-
-        audio_label = Gtk.Label(label=_("Audio source"))
-        audio_label.set_size_request(120, -1)
-        audio_label.set_xalign(0)
-        audio_row.append(audio_label)
-
-        self.audio_source_combo = Gtk.ComboBoxText()
-        self.audio_source_combo.set_hexpand(True)
         self.audio_source_combo.connect("changed", self.on_audio_source_changed)
-        audio_row.append(self.audio_source_combo)
 
-        self.audio_backend_combo = Gtk.ComboBoxText()
+        self.audio_backend_combo.remove_all()
         self.audio_backend_combo.append("pulse", "Pulse/PipeWire")
         self.audio_backend_combo.append("alsa", "ALSA")
         self.audio_backend_combo.set_active_id("pulse")
         self.audio_backend_combo.connect("changed", self.on_capture_settings_changed)
-        audio_row.append(self.audio_backend_combo)
 
-        format_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        input_box.append(format_row)
-
-        format_label = Gtk.Label(label=_("Input format"))
-        format_label.set_size_request(120, -1)
-        format_label.set_xalign(0)
-        format_row.append(format_label)
-
-        self.video_format_combo = Gtk.ComboBoxText()
-        self.video_format_combo.set_hexpand(True)
         self.video_format_combo.connect("changed", self.on_capture_settings_changed)
-        format_row.append(self.video_format_combo)
-
-        size_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        input_box.append(size_row)
-
-        size_label = Gtk.Label(label=_("Video size"))
-        size_label.set_size_request(120, -1)
-        size_label.set_xalign(0)
-        size_row.append(size_label)
-
-        self.video_size_combo = Gtk.ComboBoxText()
-        self.video_size_combo.set_hexpand(True)
         self.video_size_combo.connect("changed", self.on_capture_settings_changed)
-        size_row.append(self.video_size_combo)
-
-        self.video_size_entry = Gtk.Entry()
-        self.video_size_entry.set_placeholder_text(_("Custom, e.g. 720x576"))
-        self.video_size_entry.set_hexpand(True)
         self.video_size_entry.connect("changed", self.on_capture_settings_changed)
-        size_row.append(self.video_size_entry)
 
-        standard_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        input_box.append(standard_row)
-
-        standard_label = Gtk.Label(label=_("TV standard"))
-        standard_label.set_size_request(120, -1)
-        standard_label.set_xalign(0)
-        standard_row.append(standard_label)
-
-        self.video_standard_combo = Gtk.ComboBoxText()
+        self.video_standard_combo.remove_all()
         self.video_standard_combo.append("auto", _("Auto"))
         self.video_standard_combo.append("pal", "PAL")
         self.video_standard_combo.append("ntsc", "NTSC")
         self.video_standard_combo.append("secam", "SECAM")
         self.video_standard_combo.set_active_id("auto")
         self.video_standard_combo.connect("changed", self.on_capture_settings_changed)
-        standard_row.append(self.video_standard_combo)
 
-        self.use_libv4l2_check = Gtk.CheckButton(label=_("Use libv4l2"))
         self.use_libv4l2_check.set_active(True)
         self.use_libv4l2_check.connect("toggled", self.on_capture_settings_changed)
-        input_box.append(self.use_libv4l2_check)
 
-        preview_frame = Gtk.Frame(label=_("Live View & Live Audio"))
-        preview_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        preview_box.set_margin_top(8)
-        preview_box.set_margin_bottom(8)
-        preview_box.set_margin_start(8)
-        preview_box.set_margin_end(8)
-        preview_frame.set_child(preview_box)
-        preview_frame.set_hexpand(True)
-        io_row.append(preview_frame)
-
-        self.preview_picture = Gtk.Picture()
-        self.preview_picture.set_content_fit(Gtk.ContentFit.CONTAIN)
-        self.preview_picture.set_size_request(420, 260)
-
-        preview_picture_frame = Gtk.Frame()
-        preview_picture_frame.set_child(self.preview_picture)
-        preview_box.append(preview_picture_frame)
-
-        monitor_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        preview_box.append(monitor_row)
-
-        self.preview_start_button = Gtk.Button(label=_("Start live view"))
         self.preview_start_button.connect("clicked", self.on_preview_start_clicked)
-        monitor_row.append(self.preview_start_button)
-
-        self.preview_stop_button = Gtk.Button(label=_("Stop live view"))
-        self.preview_stop_button.set_sensitive(False)
         self.preview_stop_button.connect("clicked", self.on_preview_stop_clicked)
-        monitor_row.append(self.preview_stop_button)
-
-        self.preview_mute_check = Gtk.CheckButton(label=_("Mute live audio"))
         self.preview_mute_check.set_active(False)
         self.preview_mute_check.connect("toggled", self.on_preview_audio_control_changed)
-        monitor_row.append(self.preview_mute_check)
-
-        vol_label = Gtk.Label(label=_("Volume"))
-        monitor_row.append(vol_label)
-
-        self.preview_volume_scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0.0, 2.0, 0.01)
         self.preview_volume_scale.set_value(1.0)
-        self.preview_volume_scale.set_digits(2)
-        self.preview_volume_scale.set_hexpand(True)
         self.preview_volume_scale.connect("value-changed", self.on_preview_audio_control_changed)
-        monitor_row.append(self.preview_volume_scale)
 
-        policy_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        preview_box.append(policy_row)
-
-        policy_label = Gtk.Label(label=_("Live during capture"))
-        policy_label.set_xalign(0)
-        policy_row.append(policy_label)
-
-        self.live_during_capture_combo = Gtk.ComboBoxText()
+        self.live_during_capture_combo.remove_all()
         for policy_id, policy_label_text in LIVE_DURING_CAPTURE_POLICIES:
             self.live_during_capture_combo.append(policy_id, policy_label_text)
         self.live_during_capture_combo.set_active_id("auto")
-        policy_row.append(self.live_during_capture_combo)
-
-        self.preview_level_bar = Gtk.ProgressBar()
-        self.preview_level_bar.set_show_text(True)
         self.preview_level_bar.set_text(_("Audio level"))
         self.preview_level_bar.set_fraction(0.0)
-        preview_box.append(self.preview_level_bar)
 
-        self.preview_status_label = Gtk.Label(label="")
-        self.preview_status_label.set_xalign(0)
-        self.preview_status_label.add_css_class("dim-label")
-        preview_box.append(self.preview_status_label)
-
-        output_frame = Gtk.Frame(label=_("Capture Output"))
-        output_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        output_box.set_margin_top(8)
-        output_box.set_margin_bottom(8)
-        output_box.set_margin_start(8)
-        output_box.set_margin_end(8)
-        output_frame.set_child(output_box)
-        self.append(output_frame)
-
-        output_path_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        output_box.append(output_path_row)
-
-        output_path_label = Gtk.Label(label=_("Output file"))
-        output_path_label.set_size_request(140, -1)
-        output_path_label.set_xalign(0)
-        output_path_row.append(output_path_label)
-
-        self.output_entry = Gtk.Entry()
-        self.output_entry.set_hexpand(True)
         self.output_entry.connect("changed", self.on_capture_settings_changed)
-        output_path_row.append(self.output_entry)
-
-        output_browse = Gtk.Button(label=_("Choose"))
         output_browse.connect("clicked", self.on_choose_output_clicked)
-        output_path_row.append(output_browse)
 
-        codec_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        output_box.append(codec_row)
-
-        container_label = Gtk.Label(label=_("Container"))
-        container_label.set_size_request(140, -1)
-        container_label.set_xalign(0)
-        codec_row.append(container_label)
-
-        self.container_combo = Gtk.ComboBoxText()
+        self.container_combo.remove_all()
         for cont in CONTAINERS:
             self.container_combo.append(cont, cont.upper())
         self.container_combo.set_active_id("mkv")
         self.container_combo.connect("changed", self.on_container_changed)
-        codec_row.append(self.container_combo)
 
-        self.show_all_capture_codecs = Gtk.CheckButton(label=_("Show unusable codecs"))
         self.show_all_capture_codecs.connect("toggled", self.on_capture_codec_filter_changed)
-        codec_row.append(self.show_all_capture_codecs)
-
-        video_codec_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        output_box.append(video_codec_row)
-
-        video_codec_label = Gtk.Label(label=_("Video codec"))
-        video_codec_label.set_size_request(140, -1)
-        video_codec_label.set_xalign(0)
-        video_codec_row.append(video_codec_label)
-
-        self.capture_video_codec_combo = Gtk.ComboBoxText()
-        self.capture_video_codec_combo.set_hexpand(True)
         self.capture_video_codec_combo.connect("changed", self.on_capture_video_codec_changed)
-        video_codec_row.append(self.capture_video_codec_combo)
-
-        self.capture_video_bitrate_entry = Gtk.Entry()
-        self.capture_video_bitrate_entry.set_placeholder_text(_("Bitrate, e.g. 6M"))
         self.capture_video_bitrate_entry.set_text("6M")
         self.capture_video_bitrate_entry.connect("changed", self.on_capture_settings_changed)
-        video_codec_row.append(self.capture_video_bitrate_entry)
-
-        preset_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        output_box.append(preset_row)
-
-        preset_label = Gtk.Label(label=_("Preset"))
-        preset_label.set_size_request(140, -1)
-        preset_label.set_xalign(0)
-        preset_row.append(preset_label)
-
-        self.capture_preset_combo = Gtk.ComboBoxText()
         self.capture_preset_combo.connect("changed", self.on_capture_settings_changed)
-        preset_row.append(self.capture_preset_combo)
-
-        self.capture_tune_entry = Gtk.Entry()
-        self.capture_tune_entry.set_placeholder_text(_("Optional tune, e.g. film, grain"))
-        self.capture_tune_entry.set_hexpand(True)
         self.capture_tune_entry.connect("changed", self.on_capture_settings_changed)
-        preset_row.append(self.capture_tune_entry)
-
-        audio_codec_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        output_box.append(audio_codec_row)
-
-        audio_codec_label = Gtk.Label(label=_("Audio codec"))
-        audio_codec_label.set_size_request(140, -1)
-        audio_codec_label.set_xalign(0)
-        audio_codec_row.append(audio_codec_label)
-
-        self.capture_audio_codec_combo = Gtk.ComboBoxText()
-        self.capture_audio_codec_combo.set_hexpand(True)
         self.capture_audio_codec_combo.connect("changed", self.on_capture_settings_changed)
-        audio_codec_row.append(self.capture_audio_codec_combo)
-
-        self.capture_audio_bitrate_entry = Gtk.Entry()
-        self.capture_audio_bitrate_entry.set_placeholder_text(_("Bitrate, e.g. 192k"))
         self.capture_audio_bitrate_entry.set_text("192k")
         self.capture_audio_bitrate_entry.connect("changed", self.on_capture_settings_changed)
-        audio_codec_row.append(self.capture_audio_bitrate_entry)
 
-        audio_meta_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        output_box.append(audio_meta_row)
-
-        sample_label = Gtk.Label(label=_("Sample rate"))
-        sample_label.set_size_request(140, -1)
-        sample_label.set_xalign(0)
-        audio_meta_row.append(sample_label)
-
-        self.sample_rate_spin = Gtk.SpinButton.new_with_range(8000, 192000, 1000)
         self.sample_rate_spin.set_value(48000)
         self.sample_rate_spin.connect("value-changed", self.on_capture_settings_changed)
-        audio_meta_row.append(self.sample_rate_spin)
 
-        channels_label = Gtk.Label(label=_("Channels"))
-        audio_meta_row.append(channels_label)
-
-        self.channels_combo = Gtk.ComboBoxText()
+        self.channels_combo.remove_all()
         self.channels_combo.append("1", "1")
         self.channels_combo.append("2", "2")
         self.channels_combo.set_active_id("2")
         self.channels_combo.connect("changed", self.on_capture_settings_changed)
-        audio_meta_row.append(self.channels_combo)
 
-        audio_tune_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        output_box.append(audio_tune_row)
-
-        audio_filter_label = Gtk.Label(label=_("Audio cleanup"))
-        audio_filter_label.set_size_request(140, -1)
-        audio_filter_label.set_xalign(0)
-        audio_tune_row.append(audio_filter_label)
-
-        self.audio_filter_combo = Gtk.ComboBoxText()
+        self.audio_filter_combo.remove_all()
         for preset_id, preset_label in AUDIO_FILTER_PRESETS:
             self.audio_filter_combo.append(preset_id, preset_label)
         self.audio_filter_combo.set_active_id("off")
-        self.audio_filter_combo.set_hexpand(True)
         self.audio_filter_combo.connect("changed", self.on_capture_settings_changed)
-        audio_tune_row.append(self.audio_filter_combo)
 
-        audio_gain_label = Gtk.Label(label=_("Gain (dB)"))
-        audio_tune_row.append(audio_gain_label)
-
-        self.audio_gain_spin = Gtk.SpinButton.new_with_range(-24.0, 24.0, 0.5)
         self.audio_gain_spin.set_value(0.0)
         self.audio_gain_spin.set_digits(1)
         self.audio_gain_spin.connect("value-changed", self.on_capture_settings_changed)
-        audio_tune_row.append(self.audio_gain_spin)
 
-        pixfps_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        output_box.append(pixfps_row)
-
-        pix_label = Gtk.Label(label=_("Pixel format"))
-        pix_label.set_size_request(140, -1)
-        pix_label.set_xalign(0)
-        pixfps_row.append(pix_label)
-
-        self.capture_pixfmt_combo = Gtk.ComboBoxText()
-        self.capture_pixfmt_combo.set_hexpand(True)
         self.capture_pixfmt_combo.connect("changed", self.on_capture_settings_changed)
-        pixfps_row.append(self.capture_pixfmt_combo)
-
-        self.match_fps_check = Gtk.CheckButton(label=_("Match source FPS"))
         self.match_fps_check.set_active(True)
         self.match_fps_check.connect("toggled", self.on_match_fps_toggled)
-        pixfps_row.append(self.match_fps_check)
-
-        self.output_fps_spin = Gtk.SpinButton.new_with_range(1, 120, 0.01)
         self.output_fps_spin.set_value(25.0)
         self.output_fps_spin.set_digits(3)
         self.output_fps_spin.set_sensitive(False)
         self.output_fps_spin.connect("value-changed", self.on_capture_settings_changed)
-        pixfps_row.append(self.output_fps_spin)
-
-        filter_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        output_box.append(filter_row)
-
-        self.deinterlace_check = Gtk.CheckButton(label=_("Deinterlace (yadif)"))
         self.deinterlace_check.set_active(False)
         self.deinterlace_check.connect("toggled", self.on_capture_settings_changed)
-        filter_row.append(self.deinterlace_check)
-
-        extra_label = Gtk.Label(label=_("Extra args"))
-        filter_row.append(extra_label)
-
-        self.capture_extra_entry = Gtk.Entry()
-        self.capture_extra_entry.set_hexpand(True)
-        self.capture_extra_entry.set_placeholder_text(_("Optional FFmpeg args"))
         self.capture_extra_entry.connect("changed", self.on_capture_settings_changed)
-        filter_row.append(self.capture_extra_entry)
 
-        cmd_frame = Gtk.Frame(label=_("Capture command preview"))
-        cmd_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        cmd_box.set_margin_top(8)
-        cmd_box.set_margin_bottom(8)
-        cmd_box.set_margin_start(8)
-        cmd_box.set_margin_end(8)
-        cmd_frame.set_child(cmd_box)
-        self.append(cmd_frame)
+        for widget, width in (
+            (self.profile_combo, 240),
+            (self.video_device_combo, 260),
+            (self.video_input_combo, 180),
+            (self.audio_source_combo, 220),
+            (self.audio_backend_combo, 145),
+            (self.video_format_combo, 170),
+            (self.video_size_combo, 140),
+            (self.video_standard_combo, 120),
+            (self.container_combo, 110),
+            (self.capture_video_codec_combo, 190),
+            (self.capture_preset_combo, 120),
+            (self.capture_audio_codec_combo, 190),
+            (self.audio_filter_combo, 165),
+            (self.capture_pixfmt_combo, 165),
+            (self.live_during_capture_combo, 150),
+            (self.channels_combo, 75),
+        ):
+            compact_widget(widget, width)
 
-        self.capture_command_buffer = Gtk.TextBuffer()
-        self.capture_command_view = Gtk.TextView(buffer=self.capture_command_buffer)
-        self.capture_command_view.set_editable(False)
-        self.capture_command_view.set_monospace(True)
-
-        cmd_scroller = Gtk.ScrolledWindow()
-        cmd_scroller.set_min_content_height(80)
-        cmd_scroller.set_child(self.capture_command_view)
-        cmd_box.append(cmd_scroller)
-
-        action_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        cmd_box.append(action_row)
-
-        self.capture_start_button = Gtk.Button(label=_("Start capture"))
         self.capture_start_button.connect("clicked", self.on_capture_start_clicked)
-        action_row.append(self.capture_start_button)
-
-        self.capture_stop_button = Gtk.Button(label=_("Stop capture"))
-        self.capture_stop_button.set_sensitive(False)
         self.capture_stop_button.connect("clicked", self.on_capture_stop_clicked)
-        action_row.append(self.capture_stop_button)
-
-        self.capture_status_label = Gtk.Label(label="")
-        self.capture_status_label.set_xalign(0)
-        cmd_box.append(self.capture_status_label)
-
-        log_frame = Gtk.Frame(label=_("Capture log"))
-        log_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        log_box.set_margin_top(8)
-        log_box.set_margin_bottom(8)
-        log_box.set_margin_start(8)
-        log_box.set_margin_end(8)
-        log_frame.set_child(log_box)
-        self.append(log_frame)
-
-        self.capture_log_buffer = Gtk.TextBuffer()
-        self.capture_log_view = Gtk.TextView(buffer=self.capture_log_buffer)
-        self.capture_log_view.set_editable(False)
-        self.capture_log_view.set_monospace(True)
-
-        log_scroller = Gtk.ScrolledWindow()
-        log_scroller.set_vexpand(True)
-        log_scroller.set_min_content_height(180)
-        log_scroller.set_child(self.capture_log_view)
-        log_box.append(log_scroller)
 
     def sync_capabilities(
         self,
@@ -1476,7 +1175,7 @@ class CapturePage(Gtk.Box):
 
     def on_refresh_devices_clicked(self, _button: Gtk.Button) -> None:
         self.refresh_devices()
-        self.capture_status_label.set_text(_("Devices refreshed."))
+        self._set_capture_status_text(_("Devices refreshed."))
 
     def on_video_device_changed(self, _combo: Gtk.ComboBoxText) -> None:
         self._refresh_video_input_options()
@@ -1852,9 +1551,9 @@ class CapturePage(Gtk.Box):
 
         self.capture_command_buffer.set_text(_shell_preview(cmd))
         if warnings:
-            self.capture_status_label.set_text("\n".join(warnings))
+            self._set_capture_status_text("\n".join(warnings))
         elif not self.capture_runner.running:
-            self.capture_status_label.set_text("")
+            self._set_capture_status_text("")
 
     def on_capture_start_clicked(self, _button: Gtk.Button) -> None:
         if self.capture_runner.running:
@@ -1889,7 +1588,7 @@ class CapturePage(Gtk.Box):
                 monitor_udp_port=monitor_port,
             )
         except RuntimeError as exc:
-            self.capture_status_label.set_text(str(exc))
+            self._set_capture_status_text(str(exc))
             return
 
         self._clear_capture_log()
@@ -1906,7 +1605,7 @@ class CapturePage(Gtk.Box):
             self._append_capture_log(f"[capture] Live monitor stream: {monitor_uri}")
         self._append_capture_log(_("Running:") + " " + _shell_preview(cmd))
         if warnings:
-            self.capture_status_label.set_text("\n".join(warnings))
+            self._set_capture_status_text("\n".join(warnings))
         if preview_was_running and live_policy == "stop":
             self._append_capture_status_warning(_("Live view was stopped automatically during capture."))
         if monitor_stream_enabled and preview_was_running:
@@ -1919,7 +1618,7 @@ class CapturePage(Gtk.Box):
         try:
             self.capture_runner.start(cmd)
         except Exception as exc:
-            self.capture_status_label.set_text(str(exc))
+            self._set_capture_status_text(str(exc))
             return
 
         self._capture_monitor_uri = monitor_uri
@@ -1950,7 +1649,7 @@ class CapturePage(Gtk.Box):
             )
             and ("plughw" in low or "hw:" in low or "alsa_input" in low or "pulse" in low)
         ):
-            self.capture_status_label.set_text(
+            self._set_capture_status_text(
                 _("Audio source could not be opened. Verify selected source and backend.")
             )
             self._capture_audio_open_error_reported = True
@@ -1974,7 +1673,7 @@ class CapturePage(Gtk.Box):
 
         self.capture_start_button.set_sensitive(True)
         self.capture_stop_button.set_sensitive(False)
-        self.capture_status_label.set_text(_("Capture finished with code ") + str(rc))
+        self._set_capture_status_text(_("Capture finished with code ") + str(rc))
 
     def _clear_capture_log(self) -> None:
         self.capture_log_buffer.set_text("")
@@ -1983,6 +1682,10 @@ class CapturePage(Gtk.Box):
         start_iter = self.capture_log_buffer.get_start_iter()
         self.capture_log_buffer.insert(start_iter, line + "\n")
         return False
+
+    def _set_capture_status_text(self, text: str) -> None:
+        self.capture_status_label.set_text(text)
+        self.capture_status_label.set_visible(bool(text.strip()))
 
     def on_preview_start_clicked(self, _button: Gtk.Button) -> None:
         if self._capture_monitor_uri:
@@ -2605,6 +2308,6 @@ class CapturePage(Gtk.Box):
     def _append_capture_status_warning(self, text: str) -> None:
         existing = self.capture_status_label.get_text().strip()
         if not existing:
-            self.capture_status_label.set_text(text)
+            self._set_capture_status_text(text)
             return
-        self.capture_status_label.set_text(existing + "\n" + text)
+        self._set_capture_status_text(existing + "\n" + text)

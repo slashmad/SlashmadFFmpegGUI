@@ -18,6 +18,7 @@ License:
 - Analog source input selection for devices exposing `Composite` / `S-Video`.
 - Explicit FFmpeg command preview for capture and export jobs.
 - Flatpak support with host-device discovery via `flatpak-spawn --host`.
+- Compact custom dark GTK styling tuned for capture, review, and long-session editing.
 
 ## Edit Workflow Notes
 
@@ -144,19 +145,7 @@ Notes:
   - `--filesystem=xdg-download`
   - `--filesystem=xdg-videos`
 
-## Flatpak Theme Override
-
-Force Adwaita dark if your desktop theme is unavailable in the runtime:
-
-```bash
-flatpak override --user --env=GTK_THEME=Adwaita:dark com.slashmad.SlashmadFFmpegGUI
-```
-
-Reset the override:
-
-```bash
-flatpak override --user --reset com.slashmad.SlashmadFFmpegGUI
-```
+The app now ships its own compact dark styling, so a separate Flatpak dark-theme override should normally not be needed.
 
 ## Search Terms
 

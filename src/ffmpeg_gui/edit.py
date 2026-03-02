@@ -16,6 +16,7 @@ from gi.repository import Gdk, GLib, Gio, Gtk
 from ffmpeg_gui.ffmpeg import EncoderInfo, PixelFormat
 from ffmpeg_gui.i18n import _
 from ffmpeg_gui.runner import FFmpegRunner
+from ffmpeg_gui.ui import bind_objects, compact_widget, load_builder, require_object
 
 GST_AVAILABLE = False
 GST_GTK4PAINTABLE_AVAILABLE = False
@@ -291,11 +292,11 @@ class TrimRangeBar(Gtk.DrawingArea):
 
 class EditPage(Gtk.Box):
     def __init__(self) -> None:
-        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-        self.set_margin_top(12)
-        self.set_margin_bottom(12)
-        self.set_margin_start(12)
-        self.set_margin_end(12)
+        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=5)
+        self.set_margin_top(5)
+        self.set_margin_bottom(5)
+        self.set_margin_start(5)
+        self.set_margin_end(5)
         self.set_focusable(True)
 
         page_keys = Gtk.EventControllerKey()
@@ -332,484 +333,163 @@ class EditPage(Gtk.Box):
         self._set_default_output_path()
 
     def _build_ui(self) -> None:
-        info_frame = Gtk.Frame(label=_("Edit Status"))
-        info_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        info_box.set_margin_top(8)
-        info_box.set_margin_bottom(8)
-        info_box.set_margin_start(8)
-        info_box.set_margin_end(8)
-        info_frame.set_child(info_box)
-        self.append(info_frame)
-
-        self.info_label = Gtk.Label(label=_("Load a captured file to preview and export corrections."))
-        self.info_label.set_xalign(0)
-        self.info_label.add_css_class("dim-label")
-        info_box.append(self.info_label)
-
-        source_frame = Gtk.Frame(label=_("Source"))
-        source_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        source_box.set_margin_top(8)
-        source_box.set_margin_bottom(8)
-        source_box.set_margin_start(8)
-        source_box.set_margin_end(8)
-        source_frame.set_child(source_box)
-        self.append(source_frame)
-
-        source_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        source_box.append(source_row)
-
-        self.source_entry = Gtk.Entry()
-        self.source_entry.set_placeholder_text(_("Input media file"))
-        self.source_entry.set_hexpand(True)
-        self.source_entry.connect("changed", self.on_source_changed)
-        source_row.append(self.source_entry)
-
-        source_pick_button = Gtk.Button(label=_("Choose"))
-        source_pick_button.connect("clicked", self.on_choose_source_clicked)
-        source_row.append(source_pick_button)
-
-        source_hint = Gtk.Label(
-            label=_("Use this tab for post-capture fixes: sync, picture corrections, denoise and export.")
+        builder = load_builder("edit_page.ui")
+        bind_objects(
+            self,
+            builder,
+            [
+                "info_label",
+                "source_entry",
+                "source_meta_label",
+                "trim_summary_label",
+                "trim_start_label",
+                "trim_end_label",
+                "trim_set_start_button",
+                "trim_set_end_button",
+                "trim_start_prev_frame_button",
+                "trim_start_next_frame_button",
+                "trim_end_prev_frame_button",
+                "trim_end_next_frame_button",
+                "preview_picture",
+                "preview_start_button",
+                "preview_pause_button",
+                "preview_stop_button",
+                "preview_mute_check",
+                "preview_volume_scale",
+                "preview_position_label",
+                "preview_seek_scale",
+                "preview_duration_label",
+                "preview_status_label",
+                "audio_delay_spin",
+                "deinterlace_check",
+                "denoise_check",
+                "denoise_strength_spin",
+                "brightness_scale",
+                "contrast_scale",
+                "saturation_scale",
+                "audio_gain_spin",
+                "highpass_spin",
+                "lowpass_spin",
+                "output_entry",
+                "output_mode_combo",
+                "container_combo",
+                "video_codec_combo",
+                "video_bitrate_entry",
+                "audio_codec_combo",
+                "audio_bitrate_entry",
+                "sample_rate_spin",
+                "channels_combo",
+                "match_fps_check",
+                "output_fps_spin",
+                "pix_fmt_combo",
+                "start_button",
+                "stop_button",
+                "status_label",
+                "log_view",
+            ],
         )
-        source_hint.set_xalign(0)
-        source_hint.set_wrap(True)
-        source_hint.add_css_class("dim-label")
-        source_box.append(source_hint)
 
-        self.source_meta_label = Gtk.Label(label=_("No source loaded."))
-        self.source_meta_label.set_xalign(0)
-        self.source_meta_label.set_wrap(True)
-        self.source_meta_label.add_css_class("dim-label")
-        source_box.append(self.source_meta_label)
+        self.append(require_object(builder, "edit_page_root"))
 
-        trim_frame = Gtk.Frame(label=_("Trim"))
-        trim_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        trim_box.set_margin_top(8)
-        trim_box.set_margin_bottom(8)
-        trim_box.set_margin_start(8)
-        trim_box.set_margin_end(8)
-        trim_frame.set_child(trim_box)
-        self.append(trim_frame)
-
-        self.trim_summary_label = Gtk.Label(label=_("Load a file to set clip start and end."))
-        self.trim_summary_label.set_xalign(0)
-        self.trim_summary_label.add_css_class("dim-label")
-        trim_box.append(self.trim_summary_label)
-
-        trim_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        trim_box.append(trim_row)
-
-        trim_row.append(Gtk.Label(label=_("Start")))
-        self.trim_start_label = Gtk.Label(label="00:00.000")
-        self.trim_start_label.set_width_chars(12)
-        self.trim_start_label.set_xalign(0.0)
-        trim_row.append(self.trim_start_label)
+        source_pick_button = require_object(builder, "source_pick_button")
+        trim_range_placeholder = require_object(builder, "trim_range_placeholder")
+        out_pick_button = require_object(builder, "out_pick_button")
 
         self.trim_range_bar = TrimRangeBar()
         self.trim_range_bar.set_sensitive(False)
         self.trim_range_bar.set_changed_callback(self.on_trim_changed)
-        trim_row.append(self.trim_range_bar)
+        trim_range_placeholder.append(self.trim_range_bar)
 
-        trim_row.append(Gtk.Label(label=_("End")))
-        self.trim_end_label = Gtk.Label(label="00:00.000")
-        self.trim_end_label.set_width_chars(12)
-        self.trim_end_label.set_xalign(0.0)
-        trim_row.append(self.trim_end_label)
-
-        trim_buttons_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        trim_box.append(trim_buttons_row)
-
-        self.trim_set_start_button = Gtk.Button(label=_("Set start from playhead"))
-        self.trim_set_start_button.set_sensitive(False)
-        self.trim_set_start_button.connect("clicked", self.on_trim_set_start_clicked)
-        trim_buttons_row.append(self.trim_set_start_button)
-
-        self.trim_set_end_button = Gtk.Button(label=_("Set from playhead"))
-        self.trim_set_end_button.set_sensitive(False)
-        self.trim_set_end_button.connect("clicked", self.on_trim_set_end_clicked)
-        trim_buttons_row.append(self.trim_set_end_button)
-
-        trim_step_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        trim_box.append(trim_step_row)
-
-        trim_step_row.append(Gtk.Label(label=_("Start")))
-
-        self.trim_start_prev_frame_button = Gtk.Button(label=_("-1f"))
-        self.trim_start_prev_frame_button.set_sensitive(False)
-        self.trim_start_prev_frame_button.connect("clicked", self.on_trim_start_prev_frame_clicked)
-        trim_step_row.append(self.trim_start_prev_frame_button)
-
-        self.trim_start_next_frame_button = Gtk.Button(label=_("+1f"))
-        self.trim_start_next_frame_button.set_sensitive(False)
-        self.trim_start_next_frame_button.connect("clicked", self.on_trim_start_next_frame_clicked)
-        trim_step_row.append(self.trim_start_next_frame_button)
-
-        trim_step_row.append(Gtk.Separator(orientation=Gtk.Orientation.VERTICAL))
-        trim_step_row.append(Gtk.Label(label=_("End")))
-
-        self.trim_end_prev_frame_button = Gtk.Button(label=_("-1f"))
-        self.trim_end_prev_frame_button.set_sensitive(False)
-        self.trim_end_prev_frame_button.connect("clicked", self.on_trim_end_prev_frame_clicked)
-        trim_step_row.append(self.trim_end_prev_frame_button)
-
-        self.trim_end_next_frame_button = Gtk.Button(label=_("+1f"))
-        self.trim_end_next_frame_button.set_sensitive(False)
-        self.trim_end_next_frame_button.connect("clicked", self.on_trim_end_next_frame_clicked)
-        trim_step_row.append(self.trim_end_next_frame_button)
-
-        trim_hint = Gtk.Label(
-            label=_("Use the player timeline to seek, then set trim start/end from the current playhead.")
-        )
-        trim_hint.set_xalign(0)
-        trim_hint.set_wrap(True)
-        trim_hint.add_css_class("dim-label")
-        trim_box.append(trim_hint)
-
-        top_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-        self.append(top_row)
-
-        preview_frame = Gtk.Frame(label=_("Live Preview"))
-        preview_frame.set_hexpand(True)
-        preview_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        preview_box.set_margin_top(8)
-        preview_box.set_margin_bottom(8)
-        preview_box.set_margin_start(8)
-        preview_box.set_margin_end(8)
-        preview_frame.set_child(preview_box)
-        top_row.append(preview_frame)
-
-        self.preview_picture = Gtk.Picture()
-        self.preview_picture.set_content_fit(Gtk.ContentFit.CONTAIN)
-        self.preview_picture.set_size_request(520, 300)
-        self.preview_picture.set_focusable(True)
         preview_keys = Gtk.EventControllerKey()
         preview_keys.connect("key-pressed", self.on_preview_key_pressed)
         self.preview_picture.add_controller(preview_keys)
-        preview_picture_frame = Gtk.Frame()
-        preview_picture_frame.set_child(self.preview_picture)
-        preview_box.append(preview_picture_frame)
 
-        preview_ctl_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        preview_box.append(preview_ctl_row)
+        self.command_buffer = Gtk.TextBuffer()
+        self.log_buffer = self.log_view.get_buffer()
 
-        self.preview_start_button = Gtk.Button(label=_("Play"))
+        self.source_entry.connect("changed", self.on_source_changed)
+        source_pick_button.connect("clicked", self.on_choose_source_clicked)
+
+        self.trim_set_start_button.connect("clicked", self.on_trim_set_start_clicked)
+        self.trim_set_end_button.connect("clicked", self.on_trim_set_end_clicked)
+        self.trim_start_prev_frame_button.connect("clicked", self.on_trim_start_prev_frame_clicked)
+        self.trim_start_next_frame_button.connect("clicked", self.on_trim_start_next_frame_clicked)
+        self.trim_end_prev_frame_button.connect("clicked", self.on_trim_end_prev_frame_clicked)
+        self.trim_end_next_frame_button.connect("clicked", self.on_trim_end_next_frame_clicked)
+
         self.preview_start_button.connect("clicked", self.on_preview_start_clicked)
-        preview_ctl_row.append(self.preview_start_button)
-
-        self.preview_pause_button = Gtk.Button(label=_("Pause"))
-        self.preview_pause_button.set_sensitive(False)
         self.preview_pause_button.connect("clicked", self.on_preview_pause_clicked)
-        preview_ctl_row.append(self.preview_pause_button)
-
-        self.preview_stop_button = Gtk.Button(label=_("Stop preview"))
-        self.preview_stop_button.set_sensitive(False)
         self.preview_stop_button.connect("clicked", self.on_preview_stop_clicked)
-        preview_ctl_row.append(self.preview_stop_button)
-
-        self.preview_mute_check = Gtk.CheckButton(label=_("Mute"))
         self.preview_mute_check.connect("toggled", self.on_preview_audio_changed)
-        preview_ctl_row.append(self.preview_mute_check)
-
-        volume_label = Gtk.Label(label=_("Volume"))
-        preview_ctl_row.append(volume_label)
-
-        self.preview_volume_scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0.0, 2.0, 0.01)
         self.preview_volume_scale.set_value(1.0)
-        self.preview_volume_scale.set_digits(2)
-        self.preview_volume_scale.set_hexpand(True)
         self.preview_volume_scale.connect("value-changed", self.on_preview_audio_changed)
-        preview_ctl_row.append(self.preview_volume_scale)
-
-        seek_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        preview_box.append(seek_row)
-
-        self.preview_position_label = Gtk.Label(label="00:00.000")
-        self.preview_position_label.set_width_chars(12)
-        self.preview_position_label.set_xalign(0.0)
-        seek_row.append(self.preview_position_label)
-
-        self.preview_seek_scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0.0, 1.0, 0.01)
-        self.preview_seek_scale.set_draw_value(False)
-        self.preview_seek_scale.set_hexpand(True)
-        self.preview_seek_scale.set_sensitive(False)
         self.preview_seek_scale.connect("value-changed", self.on_preview_seek_changed)
-        seek_row.append(self.preview_seek_scale)
 
-        self.preview_duration_label = Gtk.Label(label="00:00.000")
-        self.preview_duration_label.set_width_chars(12)
-        self.preview_duration_label.set_xalign(1.0)
-        seek_row.append(self.preview_duration_label)
-
-        self.preview_status_label = Gtk.Label(label="")
-        self.preview_status_label.set_xalign(0)
-        self.preview_status_label.add_css_class("dim-label")
-        preview_box.append(self.preview_status_label)
-
-        adjust_frame = Gtk.Frame(label=_("Corrections"))
-        adjust_frame.set_hexpand(True)
-        adjust_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        adjust_box.set_margin_top(8)
-        adjust_box.set_margin_bottom(8)
-        adjust_box.set_margin_start(8)
-        adjust_box.set_margin_end(8)
-        adjust_frame.set_child(adjust_box)
-        top_row.append(adjust_frame)
-
-        self.audio_delay_spin = Gtk.SpinButton.new_with_range(-2000, 2000, 10)
         self.audio_delay_spin.set_value(0)
         self.audio_delay_spin.connect("value-changed", self.on_audio_delay_changed)
-        self._add_setting_row(
-            adjust_box,
-            _("Audio delay (ms)"),
-            self.audio_delay_spin,
-            _("Positive values delay audio, negative values advance audio."),
-        )
-
-        self.deinterlace_check = Gtk.CheckButton(label=_("Enable"))
         self.deinterlace_check.connect("toggled", self.on_preview_rebuild_setting_changed)
-        self._add_setting_row(
-            adjust_box,
-            _("Deinterlace"),
-            self.deinterlace_check,
-            _("Removes combing artifacts from interlaced VHS fields."),
-        )
-
-        denoise_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        self.denoise_check = Gtk.CheckButton(label=_("Enable"))
         self.denoise_check.connect("toggled", self.on_preview_rebuild_setting_changed)
-        denoise_row.append(self.denoise_check)
-
-        self.denoise_strength_spin = Gtk.SpinButton.new_with_range(0.5, 3.0, 0.1)
         self.denoise_strength_spin.set_value(1.0)
         self.denoise_strength_spin.set_digits(1)
         self.denoise_strength_spin.connect("value-changed", self.on_preview_rebuild_setting_changed)
-        denoise_row.append(self.denoise_strength_spin)
-        self._add_setting_row(
-            adjust_box,
-            _("Denoise"),
-            denoise_row,
-            _("Temporal-spatial cleanup (hqdn3d). Higher values remove more noise but can blur detail."),
-        )
-
-        self.brightness_scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, -0.20, 0.20, 0.01)
-        self.brightness_scale.set_value(0.0)
-        self.brightness_scale.set_digits(2)
-        self.brightness_scale.set_hexpand(True)
         self.brightness_scale.connect("value-changed", self.on_video_balance_changed)
-        self._add_setting_row(
-            adjust_box,
-            _("Brightness"),
-            self.brightness_scale,
-            _("Lifts or lowers luma. Keep low to avoid clipping highlights/shadows."),
-        )
-
-        self.contrast_scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0.50, 2.00, 0.01)
-        self.contrast_scale.set_value(1.0)
-        self.contrast_scale.set_digits(2)
-        self.contrast_scale.set_hexpand(True)
         self.contrast_scale.connect("value-changed", self.on_video_balance_changed)
-        self._add_setting_row(
-            adjust_box,
-            _("Contrast"),
-            self.contrast_scale,
-            _("Adjusts separation between dark and bright parts of the image."),
-        )
-
-        self.saturation_scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0.0, 2.0, 0.01)
-        self.saturation_scale.set_value(1.0)
-        self.saturation_scale.set_digits(2)
-        self.saturation_scale.set_hexpand(True)
         self.saturation_scale.connect("value-changed", self.on_video_balance_changed)
-        self._add_setting_row(
-            adjust_box,
-            _("Saturation"),
-            self.saturation_scale,
-            _("Controls color intensity. Lower values reduce color noise, higher values boost color."),
-        )
-
-        self.audio_gain_spin = Gtk.SpinButton.new_with_range(-24.0, 24.0, 0.5)
         self.audio_gain_spin.set_value(0.0)
         self.audio_gain_spin.set_digits(1)
         self.audio_gain_spin.connect("value-changed", self.on_audio_filter_changed)
-        self._add_setting_row(
-            adjust_box,
-            _("Audio gain (dB)"),
-            self.audio_gain_spin,
-            _("Linear level adjustment. Use small steps to avoid clipping."),
-        )
-
-        hp_lp_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        self.highpass_spin = Gtk.SpinButton.new_with_range(0, 500, 5)
-        self.highpass_spin.set_value(0)
         self.highpass_spin.connect("value-changed", self.on_audio_filter_changed)
-        hp_lp_row.append(Gtk.Label(label=_("HP")))
-        hp_lp_row.append(self.highpass_spin)
-
-        self.lowpass_spin = Gtk.SpinButton.new_with_range(0, 20000, 100)
-        self.lowpass_spin.set_value(0)
         self.lowpass_spin.connect("value-changed", self.on_audio_filter_changed)
-        hp_lp_row.append(Gtk.Label(label=_("LP")))
-        hp_lp_row.append(self.lowpass_spin)
-        self._add_setting_row(
-            adjust_box,
-            _("Audio filters (Hz)"),
-            hp_lp_row,
-            _("HP removes low rumble, LP removes high hiss. 0 disables each filter."),
-        )
 
-        output_frame = Gtk.Frame(label=_("Export Output"))
-        output_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        output_box.set_margin_top(8)
-        output_box.set_margin_bottom(8)
-        output_box.set_margin_start(8)
-        output_box.set_margin_end(8)
-        output_frame.set_child(output_box)
-        self.append(output_frame)
-
-        out_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        output_box.append(out_row)
-
-        self.output_entry = Gtk.Entry()
-        self.output_entry.set_hexpand(True)
-        self.output_entry.set_placeholder_text(_("Output file"))
         self.output_entry.connect("changed", self.on_settings_changed)
-        out_row.append(self.output_entry)
-
-        out_pick_button = Gtk.Button(label=_("Choose"))
         out_pick_button.connect("clicked", self.on_choose_output_clicked)
-        out_row.append(out_pick_button)
 
-        codec_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        output_box.append(codec_row)
-
-        codec_row.append(Gtk.Label(label=_("Mode")))
-        self.output_mode_combo = Gtk.ComboBoxText()
+        self.output_mode_combo.remove_all()
         for mode_id, label in EDIT_OUTPUT_MODES:
             self.output_mode_combo.append(mode_id, label)
         self.output_mode_combo.set_active_id("copy")
         self.output_mode_combo.connect("changed", self.on_output_mode_changed)
-        codec_row.append(self.output_mode_combo)
 
-        codec_row.append(Gtk.Label(label=_("Container")))
-        self.container_combo = Gtk.ComboBoxText()
+        self.container_combo.remove_all()
         for container in EDIT_CONTAINERS:
             self.container_combo.append(container, container.upper())
         self.container_combo.set_active_id("mkv")
         self.container_combo.connect("changed", self.on_container_changed)
-        codec_row.append(self.container_combo)
 
-        codec_row.append(Gtk.Label(label=_("Video codec")))
-        self.video_codec_combo = Gtk.ComboBoxText()
         self.video_codec_combo.connect("changed", self.on_settings_changed)
-        codec_row.append(self.video_codec_combo)
-
-        self.video_bitrate_entry = Gtk.Entry()
-        self.video_bitrate_entry.set_placeholder_text(_("Video bitrate, e.g. 6M"))
         self.video_bitrate_entry.set_text("6M")
         self.video_bitrate_entry.connect("changed", self.on_settings_changed)
-        codec_row.append(self.video_bitrate_entry)
-
-        audio_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        output_box.append(audio_row)
-
-        audio_row.append(Gtk.Label(label=_("Audio codec")))
-        self.audio_codec_combo = Gtk.ComboBoxText()
         self.audio_codec_combo.connect("changed", self.on_settings_changed)
-        audio_row.append(self.audio_codec_combo)
-
-        self.audio_bitrate_entry = Gtk.Entry()
-        self.audio_bitrate_entry.set_placeholder_text(_("Audio bitrate, e.g. 192k"))
         self.audio_bitrate_entry.set_text("192k")
         self.audio_bitrate_entry.connect("changed", self.on_settings_changed)
-        audio_row.append(self.audio_bitrate_entry)
-
-        audio_row.append(Gtk.Label(label=_("Sample rate")))
-        self.sample_rate_spin = Gtk.SpinButton.new_with_range(8000, 192000, 1000)
         self.sample_rate_spin.set_value(48000)
         self.sample_rate_spin.connect("value-changed", self.on_settings_changed)
-        audio_row.append(self.sample_rate_spin)
 
-        audio_row.append(Gtk.Label(label=_("Channels")))
-        self.channels_combo = Gtk.ComboBoxText()
+        self.channels_combo.remove_all()
         self.channels_combo.append("1", "1")
         self.channels_combo.append("2", "2")
         self.channels_combo.set_active_id("2")
         self.channels_combo.connect("changed", self.on_settings_changed)
-        audio_row.append(self.channels_combo)
 
-        fps_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        output_box.append(fps_row)
-
-        self.match_fps_check = Gtk.CheckButton(label=_("Match source FPS"))
         self.match_fps_check.set_active(True)
         self.match_fps_check.connect("toggled", self.on_match_fps_toggled)
-        fps_row.append(self.match_fps_check)
-
-        self.output_fps_spin = Gtk.SpinButton.new_with_range(1, 120, 0.01)
         self.output_fps_spin.set_value(25.0)
         self.output_fps_spin.set_digits(3)
         self.output_fps_spin.set_sensitive(False)
         self.output_fps_spin.connect("value-changed", self.on_settings_changed)
-        fps_row.append(self.output_fps_spin)
-
-        fps_row.append(Gtk.Label(label=_("Pixel format")))
-        self.pix_fmt_combo = Gtk.ComboBoxText()
         self.pix_fmt_combo.connect("changed", self.on_settings_changed)
-        fps_row.append(self.pix_fmt_combo)
 
-        cmd_frame = Gtk.Frame(label=_("Export command preview"))
-        cmd_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        cmd_box.set_margin_top(8)
-        cmd_box.set_margin_bottom(8)
-        cmd_box.set_margin_start(8)
-        cmd_box.set_margin_end(8)
-        cmd_frame.set_child(cmd_box)
-        self.append(cmd_frame)
-
-        self.command_buffer = Gtk.TextBuffer()
-        self.command_view = Gtk.TextView(buffer=self.command_buffer)
-        self.command_view.set_editable(False)
-        self.command_view.set_monospace(True)
-        cmd_scroller = Gtk.ScrolledWindow()
-        cmd_scroller.set_min_content_height(80)
-        cmd_scroller.set_child(self.command_view)
-        cmd_box.append(cmd_scroller)
-
-        action_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        cmd_box.append(action_row)
-
-        self.start_button = Gtk.Button(label=_("Start export"))
+        for widget, width in (
+            (self.output_mode_combo, 150),
+            (self.container_combo, 100),
+            (self.video_codec_combo, 160),
+            (self.audio_codec_combo, 150),
+            (self.channels_combo, 75),
+            (self.pix_fmt_combo, 150),
+        ):
+            compact_widget(widget, width)
         self.start_button.connect("clicked", self.on_start_clicked)
-        action_row.append(self.start_button)
-
-        self.stop_button = Gtk.Button(label=_("Stop export"))
-        self.stop_button.set_sensitive(False)
         self.stop_button.connect("clicked", self.on_stop_clicked)
-        action_row.append(self.stop_button)
-
-        self.status_label = Gtk.Label(label="")
-        self.status_label.set_xalign(0)
-        cmd_box.append(self.status_label)
-
-        log_frame = Gtk.Frame(label=_("Export log"))
-        log_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        log_box.set_margin_top(8)
-        log_box.set_margin_bottom(8)
-        log_box.set_margin_start(8)
-        log_box.set_margin_end(8)
-        log_frame.set_child(log_box)
-        self.append(log_frame)
-
-        self.log_buffer = Gtk.TextBuffer()
-        self.log_view = Gtk.TextView(buffer=self.log_buffer)
-        self.log_view.set_editable(False)
-        self.log_view.set_monospace(True)
-
-        log_scroller = Gtk.ScrolledWindow()
-        log_scroller.set_vexpand(True)
-        log_scroller.set_min_content_height(180)
-        log_scroller.set_child(self.log_view)
-        log_box.append(log_scroller)
 
         self._populate_codec_combos()
         self._populate_pix_fmt_combo()
@@ -1865,14 +1545,14 @@ class EditPage(Gtk.Box):
         except RuntimeError as exc:
             self.command_buffer.set_text(str(exc))
             if not self.runner.running:
-                self.status_label.set_text("")
+                self._set_status_text("")
             return
 
         self.command_buffer.set_text(_shell_preview(cmd))
         if warnings:
-            self.status_label.set_text("\n".join(warnings))
+            self._set_status_text("\n".join(warnings))
         elif not self.runner.running:
-            self.status_label.set_text("")
+            self._set_status_text("")
 
     def on_start_clicked(self, _button: Gtk.Button) -> None:
         if self.runner.running:
@@ -1881,18 +1561,18 @@ class EditPage(Gtk.Box):
         try:
             cmd, warnings = self._build_export_command(auto_fix_compatibility=True)
         except RuntimeError as exc:
-            self.status_label.set_text(str(exc))
+            self._set_status_text(str(exc))
             return
 
         self._clear_log()
         self._append_log(_("Running:") + " " + _shell_preview(cmd))
         if warnings:
-            self.status_label.set_text("\n".join(warnings))
+            self._set_status_text("\n".join(warnings))
 
         try:
             self.runner.start(cmd)
         except Exception as exc:
-            self.status_label.set_text(str(exc))
+            self._set_status_text(str(exc))
             return
 
         self.start_button.set_sensitive(False)
@@ -1911,7 +1591,7 @@ class EditPage(Gtk.Box):
     def _handle_runner_exit(self, rc: int) -> None:
         self.start_button.set_sensitive(True)
         self.stop_button.set_sensitive(False)
-        self.status_label.set_text(_("Export finished with code ") + str(rc))
+        self._set_status_text(_("Export finished with code ") + str(rc))
         self.update_command_preview()
 
     def _clear_log(self) -> None:
@@ -1928,9 +1608,13 @@ class EditPage(Gtk.Box):
     def _append_status_warning(self, text: str) -> None:
         existing = self.status_label.get_text().strip()
         if not existing:
-            self.status_label.set_text(text)
+            self._set_status_text(text)
             return
-        self.status_label.set_text(existing + "\n" + text)
+        self._set_status_text(existing + "\n" + text)
+
+    def _set_status_text(self, text: str) -> None:
+        self.status_label.set_text(text)
+        self.status_label.set_visible(bool(text.strip()))
 
     def shutdown(self) -> None:
         self.stop_preview()

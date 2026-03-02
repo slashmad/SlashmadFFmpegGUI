@@ -4,6 +4,7 @@ import os
 
 import gi
 
+gi.require_version("Gdk", "4.0")
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gdk, Gio, GLib, Gtk
 
@@ -20,6 +21,7 @@ from ffmpeg_gui.edit import EditPage
 from ffmpeg_gui.ffmpeg import detect_ffmpeg, detect_renderers, list_encoders, list_pixel_formats
 from ffmpeg_gui.i18n import _
 from ffmpeg_gui.runner import FFmpegRunner
+from ffmpeg_gui.ui import bind_objects, compact_widget, load_builder, require_object
 
 
 PRESETS_X264 = [
@@ -53,9 +55,10 @@ class MainWindow(Gtk.ApplicationWindow):
     def __init__(self, app: Gtk.Application):
         super().__init__(application=app)
         self.set_title(_("Slashmad FFmpeg GUI"))
-        self.set_default_size(900, 720)
+        self.set_default_size(1120, 760)
         self.set_resizable(True)
         self.set_decorated(True)
+        self.add_css_class("ffmpeg-app-window")
 
         self.input_items: list[str] = []
         self.output_auto = True
@@ -73,33 +76,43 @@ class MainWindow(Gtk.ApplicationWindow):
         self.runner = FFmpegRunner(self._on_runner_output, self._on_runner_exit)
 
         header = Gtk.HeaderBar()
+        header.add_css_class("ffmpeg-headerbar")
         header.set_title_widget(Gtk.Label(label=_("Slashmad FFmpeg GUI")))
         self.set_titlebar(header)
 
         refresh_button = Gtk.Button(label=_("Rescan"))
+        refresh_button.add_css_class("toolbar-button")
         refresh_button.set_tooltip_text(_("Re-check FFmpeg capabilities and encoders."))
         refresh_button.connect("clicked", self.on_refresh_clicked)
         header.pack_end(refresh_button)
 
         root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        root.add_css_class("ffmpeg-app")
         self.set_child(root)
 
         self.notebook = Gtk.Notebook()
         root.append(self.notebook)
 
+        self._apply_css()
+
         self.encode_page = self._build_encode_page()
+        self.encode_page.add_css_class("ffmpeg-page")
         self.capture_page = CapturePage()
+        self.capture_page.add_css_class("ffmpeg-page")
         self.capture_page_scroller = Gtk.ScrolledWindow()
         self.capture_page_scroller.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
         self.capture_page_scroller.set_child(self.capture_page)
         self.edit_page = EditPage()
+        self.edit_page.add_css_class("ffmpeg-page")
         self.edit_page_scroller = Gtk.ScrolledWindow()
         self.edit_page_scroller.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
         self.edit_page_scroller.set_child(self.edit_page)
         self.hardware_page = self._build_hardware_page()
+        self.hardware_page.add_css_class("ffmpeg-page")
         self.help_page = self._build_help_page()
+        self.help_page.add_css_class("ffmpeg-page")
 
-        self.notebook.append_page(self.encode_page, Gtk.Label(label=_("Encode")))
+        self.notebook.append_page(self.encode_page, Gtk.Label(label=_("Timelapse")))
         self.notebook.append_page(self.capture_page_scroller, Gtk.Label(label=_("Capture")))
         self.notebook.append_page(self.edit_page_scroller, Gtk.Label(label=_("Edit")))
         self.notebook.append_page(self.hardware_page, Gtk.Label(label=_("Hardware")))
@@ -111,38 +124,12 @@ class MainWindow(Gtk.ApplicationWindow):
         self.update_preview()
 
     def _build_help_page(self) -> Gtk.Widget:
-        container = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-        container.set_margin_top(12)
-        container.set_margin_bottom(12)
-        container.set_margin_start(12)
-        container.set_margin_end(12)
-
-        title = Gtk.Label(label=_("Help & README"))
-        title.set_xalign(0)
-        title.add_css_class("title-2")
-        container.append(title)
-
-        subtitle = Gtk.Label(
-            label=_("Quick help, Flatpak notes, and project README content.")
-        )
-        subtitle.set_xalign(0)
-        subtitle.add_css_class("dim-label")
-        container.append(subtitle)
-
-        help_buffer = Gtk.TextBuffer()
+        builder = load_builder("help_page.ui")
+        help_page = require_object(builder, "help_page_root")
+        self.help_view = require_object(builder, "help_view")
+        help_buffer = self.help_view.get_buffer()
         help_buffer.set_text(self._load_readme_text())
-
-        help_view = Gtk.TextView(buffer=help_buffer)
-        help_view.set_editable(False)
-        help_view.set_monospace(False)
-        help_view.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
-
-        scroller = Gtk.ScrolledWindow()
-        scroller.set_vexpand(True)
-        scroller.set_child(help_view)
-        container.append(scroller)
-
-        return container
+        return help_page
 
     def _load_readme_text(self) -> str:
         candidates = [
@@ -166,355 +153,113 @@ class MainWindow(Gtk.ApplicationWindow):
         )
 
     def _build_encode_page(self) -> Gtk.Widget:
-        container = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-        container.set_margin_top(12)
-        container.set_margin_bottom(12)
-        container.set_margin_start(12)
-        container.set_margin_end(12)
+        builder = load_builder("encode_page.ui")
+        page = require_object(builder, "encode_page_root")
+        bind_objects(
+            self,
+            builder,
+            [
+                "path_entry",
+                "input_list",
+                "input_status",
+                "output_entry",
+                "output_hint",
+                "codec_combo",
+                "show_all_check",
+                "codec_info_label",
+                "quality_spin",
+                "quality_check",
+                "preset_combo",
+                "tune_entry",
+                "pix_combo",
+                "fps_spin",
+                "extra_entry",
+                "command_view",
+                "start_button",
+                "stop_button",
+                "encode_status",
+                "log_view",
+            ],
+        )
 
-        scroller = Gtk.ScrolledWindow()
-        scroller.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
-        scroller.set_child(container)
+        add_path_button = require_object(builder, "add_path_button")
+        add_files_button = require_object(builder, "add_files_button")
+        add_folder_button = require_object(builder, "add_folder_button")
+        clear_button = require_object(builder, "clear_button")
+        output_button = require_object(builder, "choose_output_button")
 
-        io_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-        io_row.set_hexpand(True)
-        container.append(io_row)
+        self.command_buffer = self.command_view.get_buffer()
+        self.log_buffer = self.log_view.get_buffer()
 
-        input_frame = Gtk.Frame(label=_("Inputs"))
-        input_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        input_box.set_margin_top(8)
-        input_box.set_margin_bottom(8)
-        input_box.set_margin_start(8)
-        input_box.set_margin_end(8)
-        input_frame.set_child(input_box)
-        input_frame.set_hexpand(True)
-        io_row.append(input_frame)
-
-        path_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        input_box.append(path_row)
-
-        self.path_entry = Gtk.Entry()
-        self.path_entry.set_placeholder_text(_("Paste a file or folder path"))
         self.path_entry.set_tooltip_text(_("Paste an image file path or a folder path."))
-        self.path_entry.set_hexpand(True)
         self.path_entry.connect("activate", self.on_add_path_clicked)
-        path_row.append(self.path_entry)
-
-        add_path_button = Gtk.Button(label=_("Add"))
         add_path_button.set_tooltip_text(_("Add the pasted path to the input list."))
         add_path_button.connect("clicked", self.on_add_path_clicked)
-        path_row.append(add_path_button)
-
-        add_files_button = Gtk.Button(label=_("Add Files"))
         add_files_button.set_tooltip_text(_("Pick one or more image files."))
         add_files_button.connect("clicked", self.on_add_files_clicked)
-        path_row.append(add_files_button)
-
-        add_folder_button = Gtk.Button(label=_("Add Folder"))
         add_folder_button.set_tooltip_text(_("Pick a folder and load supported images inside it."))
         add_folder_button.connect("clicked", self.on_add_folder_clicked)
-        path_row.append(add_folder_button)
-
-        clear_button = Gtk.Button(label=_("Clear"))
         clear_button.set_tooltip_text(_("Clear all inputs."))
         clear_button.connect("clicked", self.on_clear_inputs_clicked)
-        path_row.append(clear_button)
 
-        self.input_list = Gtk.ListBox()
-        self.input_list.set_selection_mode(Gtk.SelectionMode.NONE)
         self.input_list.set_tooltip_text(_("Drag and drop files or folders here."))
-        input_box.append(self.input_list)
-
         drop_target = Gtk.DropTarget.new(Gdk.FileList, Gdk.DragAction.COPY)
         drop_target.connect("drop", self.on_drop)
         self.input_list.add_controller(drop_target)
 
-        self.input_status = Gtk.Label(label=_("No inputs yet."))
-        self.input_status.set_xalign(0)
-        input_box.append(self.input_status)
-
-        output_frame = Gtk.Frame(label=_("Output"))
-        output_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        output_box.set_margin_top(8)
-        output_box.set_margin_bottom(8)
-        output_box.set_margin_start(8)
-        output_box.set_margin_end(8)
-        output_frame.set_child(output_box)
-        output_frame.set_hexpand(True)
-        io_row.append(output_frame)
-
-        output_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        output_box.append(output_row)
-
-        self.output_entry = Gtk.Entry()
-        self.output_entry.set_placeholder_text(_("Output file path"))
         self.output_entry.set_tooltip_text(_("Where the rendered video will be saved."))
-        self.output_entry.set_hexpand(True)
         self.output_entry.connect("changed", self.on_output_changed)
-        output_row.append(self.output_entry)
-
-        output_button = Gtk.Button(label=_("Choose Output"))
         output_button.set_tooltip_text(_("Choose the output file path."))
         output_button.connect("clicked", self.on_choose_output_clicked)
-        output_row.append(output_button)
 
-        self.output_hint = Gtk.Label(label=_("Default is the same folder as your images."))
-        self.output_hint.set_xalign(0)
-        output_box.append(self.output_hint)
-
-        settings_frame = Gtk.Frame(label=_("Settings"))
-        settings_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        settings_box.set_margin_top(8)
-        settings_box.set_margin_bottom(8)
-        settings_box.set_margin_start(8)
-        settings_box.set_margin_end(8)
-        settings_frame.set_child(settings_box)
-        container.append(settings_frame)
-
-        codec_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        settings_box.append(codec_row)
-
-        codec_label = Gtk.Label(label=_("Video codec"))
-        codec_label.set_xalign(0)
-        codec_label.set_size_request(140, -1)
-        codec_row.append(codec_label)
-
-        self.codec_combo = Gtk.ComboBoxText()
         self.codec_combo.set_tooltip_text(_("Choose a video encoder. Auto uses FFmpeg defaults."))
-        self.codec_combo.set_hexpand(True)
         self.codec_combo.connect("changed", self.on_codec_changed)
-        codec_row.append(self.codec_combo)
-
-        self.show_all_check = Gtk.CheckButton(label=_("Show unusable codecs"))
         self.show_all_check.set_tooltip_text(_("Show codecs that require hardware not found on this system."))
         self.show_all_check.connect("toggled", self.on_show_all_toggled)
-        codec_row.append(self.show_all_check)
 
-        self.codec_info_label = Gtk.Label(label=_("Select a codec to see details."))
-        self.codec_info_label.set_xalign(0)
-        self.codec_info_label.set_wrap(True)
-        self.codec_info_label.add_css_class("dim-label")
-        settings_box.append(self.codec_info_label)
-
-        quality_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        settings_box.append(quality_row)
-
-        quality_label = Gtk.Label(label=_("Quality (CRF/CQ)"))
-        quality_label.set_xalign(0)
-        quality_label.set_size_request(140, -1)
-        quality_row.append(quality_label)
-
-        self.quality_spin = Gtk.SpinButton.new_with_range(0, 51, 1)
-        self.quality_spin.set_value(18)
         self.quality_spin.set_tooltip_text(_("CRF/CQ value. Lower = higher quality."))
         self.quality_spin.connect("value-changed", self.on_settings_changed)
-        quality_row.append(self.quality_spin)
-
-        self.quality_check = Gtk.CheckButton(label=_("Enable"))
         self.quality_check.set_tooltip_text(_("Enable CRF/CQ quality control."))
-        self.quality_check.set_active(True)
         self.quality_check.connect("toggled", self.on_quality_toggled)
-        quality_row.append(self.quality_check)
-
-        quality_hint = Gtk.Label(label=_("Uses -crf for x264/x265/AV1/VP9 and -cq for NVENC."))
-        quality_hint.set_xalign(0)
-        quality_hint.add_css_class("dim-label")
-        settings_box.append(quality_hint)
-
-        preset_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        settings_box.append(preset_row)
-
-        preset_label = Gtk.Label(label=_("Preset"))
-        preset_label.set_xalign(0)
-        preset_label.set_size_request(140, -1)
-        preset_row.append(preset_label)
-
-        self.preset_combo = Gtk.ComboBoxText()
         self.preset_combo.set_tooltip_text(_("Encoder speed/quality preset. Auto skips -preset."))
-        self.preset_combo.set_hexpand(True)
         self.preset_combo.connect("changed", self.on_settings_changed)
-        preset_row.append(self.preset_combo)
-
-        tune_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        settings_box.append(tune_row)
-
-        tune_label = Gtk.Label(label=_("Tune"))
-        tune_label.set_xalign(0)
-        tune_label.set_size_request(140, -1)
-        tune_row.append(tune_label)
-
-        self.tune_entry = Gtk.Entry()
-        self.tune_entry.set_placeholder_text(_("e.g. film, animation, grain, fastdecode"))
         self.tune_entry.set_tooltip_text(_("Optional -tune setting for the encoder."))
-        self.tune_entry.set_hexpand(True)
         self.tune_entry.connect("changed", self.on_settings_changed)
-        tune_row.append(self.tune_entry)
-
-        pix_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        settings_box.append(pix_row)
-
-        pix_label = Gtk.Label(label=_("Pixel format"))
-        pix_label.set_xalign(0)
-        pix_label.set_size_request(140, -1)
-        pix_row.append(pix_label)
-
-        self.pix_combo = Gtk.ComboBoxText()
         self.pix_combo.set_tooltip_text(_("Pixel format (color format). Auto lets FFmpeg choose."))
-        self.pix_combo.set_hexpand(True)
         self.pix_combo.connect("changed", self.on_settings_changed)
-        pix_row.append(self.pix_combo)
-
-        fps_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        settings_box.append(fps_row)
-
-        fps_label = Gtk.Label(label=_("Output FPS"))
-        fps_label.set_xalign(0)
-        fps_label.set_size_request(140, -1)
-        fps_row.append(fps_label)
-
-        self.fps_spin = Gtk.SpinButton.new_with_range(1, 240, 1)
-        self.fps_spin.set_value(25)
         self.fps_spin.set_tooltip_text(_("Output frames per second for the timelapse."))
         self.fps_spin.connect("value-changed", self.on_settings_changed)
-        fps_row.append(self.fps_spin)
-
-        fps_hint = Gtk.Label(label=_("Timelapse output uses the FPS you set here."))
-        fps_hint.set_xalign(0)
-        fps_hint.add_css_class("dim-label")
-        settings_box.append(fps_hint)
-
-        extra_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        settings_box.append(extra_row)
-
-        extra_label = Gtk.Label(label=_("Extra ffmpeg args"))
-        extra_label.set_xalign(0)
-        extra_label.set_size_request(140, -1)
-        extra_row.append(extra_label)
-
-        self.extra_entry = Gtk.Entry()
-        self.extra_entry.set_placeholder_text(_("e.g. -crf 18 -preset slow"))
         self.extra_entry.set_tooltip_text(_("Extra FFmpeg arguments appended at the end."))
-        self.extra_entry.set_hexpand(True)
         self.extra_entry.connect("changed", self.on_settings_changed)
-        extra_row.append(self.extra_entry)
 
-        preview_frame = Gtk.Frame(label=_("Command preview"))
-        preview_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        preview_box.set_margin_top(8)
-        preview_box.set_margin_bottom(8)
-        preview_box.set_margin_start(8)
-        preview_box.set_margin_end(8)
-        preview_frame.set_child(preview_box)
-        container.append(preview_frame)
-
-        self.command_buffer = Gtk.TextBuffer()
-        self.command_view = Gtk.TextView(buffer=self.command_buffer)
-        self.command_view.set_editable(False)
-        self.command_view.set_monospace(True)
         self.command_view.set_tooltip_text(_("FFmpeg command preview."))
-
-        command_scroller = Gtk.ScrolledWindow()
-        command_scroller.set_min_content_height(80)
-        command_scroller.set_child(self.command_view)
-        preview_box.append(command_scroller)
-
-        action_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        preview_box.append(action_row)
-
-        self.start_button = Gtk.Button(label=_("Start"))
         self.start_button.set_tooltip_text(_("Start rendering with FFmpeg."))
         self.start_button.connect("clicked", self.on_start_clicked)
-        action_row.append(self.start_button)
-
-        self.stop_button = Gtk.Button(label=_("Stop"))
         self.stop_button.set_tooltip_text(_("Stop the running FFmpeg process."))
-        self.stop_button.set_sensitive(False)
         self.stop_button.connect("clicked", self.on_stop_clicked)
-        action_row.append(self.stop_button)
-
-        self.encode_status = Gtk.Label(label="")
-        self.encode_status.set_xalign(0)
-        preview_box.append(self.encode_status)
-
-        log_frame = Gtk.Frame(label=_("Log"))
-        log_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        log_box.set_margin_top(8)
-        log_box.set_margin_bottom(8)
-        log_box.set_margin_start(8)
-        log_box.set_margin_end(8)
-        log_frame.set_child(log_box)
-        container.append(log_frame)
-
-        self.log_buffer = Gtk.TextBuffer()
-        self.log_view = Gtk.TextView(buffer=self.log_buffer)
-        self.log_view.set_editable(False)
-        self.log_view.set_monospace(True)
         self.log_view.set_tooltip_text(_("FFmpeg output log."))
 
-        log_scroller = Gtk.ScrolledWindow()
-        log_scroller.set_vexpand(True)
-        log_scroller.set_min_content_height(180)
-        log_scroller.set_child(self.log_view)
-        log_box.append(log_scroller)
+        compact_widget(self.codec_combo, 230)
+        compact_widget(self.preset_combo, 160)
+        compact_widget(self.pix_combo, 170)
 
-        return scroller
+        return page
 
     def _build_hardware_page(self) -> Gtk.Widget:
-        root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-        root.set_margin_top(12)
-        root.set_margin_bottom(12)
-        root.set_margin_start(12)
-        root.set_margin_end(12)
-
-        info_frame = Gtk.Frame(label=_("FFmpeg"))
-        info_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        info_box.set_margin_top(8)
-        info_box.set_margin_bottom(8)
-        info_box.set_margin_start(8)
-        info_box.set_margin_end(8)
-        info_frame.set_child(info_box)
-        root.append(info_frame)
-
-        self.command_label = Gtk.Label(label=_("Command: (detecting...)") )
-        self.command_label.set_xalign(0)
-        info_box.append(self.command_label)
-
-        self.version_label = Gtk.Label(label=_("Version: (detecting...)") )
-        self.version_label.set_xalign(0)
-        info_box.append(self.version_label)
-
-        self.error_label = Gtk.Label(label="")
-        self.error_label.set_xalign(0)
-        self.error_label.add_css_class("error")
-        info_box.append(self.error_label)
-
-        render_frame = Gtk.Frame(label=_("Hardware Acceleration"))
-        render_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        render_box.set_margin_top(8)
-        render_box.set_margin_bottom(8)
-        render_box.set_margin_start(8)
-        render_box.set_margin_end(8)
-        render_frame.set_child(render_box)
-        root.append(render_frame)
-
-        self.render_list = Gtk.ListBox()
-        self.render_list.set_selection_mode(Gtk.SelectionMode.NONE)
-
-        scroller = Gtk.ScrolledWindow()
-        scroller.set_vexpand(True)
-        scroller.set_child(self.render_list)
-        render_box.append(scroller)
-
-        self.status_label = Gtk.Label(label="")
-        self.status_label.set_xalign(0)
-        render_box.append(self.status_label)
-
-        self.hardware_label = Gtk.Label(label="")
-        self.hardware_label.set_xalign(0)
-        self.hardware_label.add_css_class("dim-label")
-        render_box.append(self.hardware_label)
-
-        return root
+        builder = load_builder("hardware_page.ui")
+        bind_objects(
+            self,
+            builder,
+            [
+                "command_label",
+                "version_label",
+                "error_label",
+                "render_list",
+                "status_label",
+                "hardware_label",
+            ],
+        )
+        return require_object(builder, "hardware_page_root")
 
     def on_refresh_clicked(self, _button: Gtk.Button) -> None:
         self.refresh()
@@ -763,6 +508,298 @@ class MainWindow(Gtk.ApplicationWindow):
             row_box.append(state_label)
             row.set_child(row_box)
             self.render_list.append(row)
+
+    def _apply_css(self) -> None:
+        if self._css_provider is not None:
+            return
+
+        css = """
+        window.ffmpeg-app-window,
+        window.ffmpeg-app-window > box,
+        window.ffmpeg-app-window viewport,
+        window.ffmpeg-app-window notebook,
+        window.ffmpeg-app-window stack,
+        window.ffmpeg-app-window .ffmpeg-page {
+            background-color: #14181d;
+            color: #edf2f8;
+        }
+
+        headerbar.ffmpeg-headerbar {
+            background: #181c22;
+            border-bottom: 1px solid #2b3340;
+            box-shadow: none;
+            min-height: 24px;
+            padding: 0 6px;
+        }
+
+        headerbar.ffmpeg-headerbar label {
+            color: #f1f5fb;
+            font-weight: 600;
+        }
+
+        headerbar.ffmpeg-headerbar button.toolbar-button {
+            background: #222933;
+            color: #edf2f8;
+            border: 1px solid #364151;
+            border-radius: 7px;
+            box-shadow: none;
+            min-height: 12px;
+            min-width: 52px;
+            padding: 2px 8px;
+        }
+
+        headerbar.ffmpeg-headerbar button.toolbar-button:hover {
+            background: #2a3340;
+        }
+
+        headerbar.ffmpeg-headerbar button.toolbar-button:active {
+            background: #313b49;
+        }
+
+        headerbar.ffmpeg-headerbar windowcontrols {
+            border-spacing: 0;
+            margin: 0;
+            padding: 0;
+        }
+
+        headerbar.ffmpeg-headerbar windowcontrols > button,
+        headerbar.ffmpeg-headerbar button.titlebutton {
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            min-width: 14px;
+            min-height: 14px;
+            margin: 0;
+            padding: 0;
+            box-shadow: none;
+        }
+
+        headerbar.ffmpeg-headerbar windowcontrols > button:hover,
+        headerbar.ffmpeg-headerbar button.titlebutton:hover {
+            background: rgba(110, 128, 150, 0.18);
+        }
+
+        headerbar.ffmpeg-headerbar windowcontrols > button:active,
+        headerbar.ffmpeg-headerbar button.titlebutton:active {
+            background: rgba(110, 128, 150, 0.28);
+        }
+
+        headerbar.ffmpeg-headerbar windowcontrols > button > image,
+        headerbar.ffmpeg-headerbar button.titlebutton > image {
+            -gtk-icon-size: 12px;
+        }
+
+        window.ffmpeg-app-window notebook > header {
+            background: #10151c;
+            border-bottom: 1px solid #27303c;
+            padding: 0 6px;
+        }
+
+        window.ffmpeg-app-window notebook > header > tabs > tab {
+            margin: 0 2px;
+            padding: 4px 10px;
+            border-radius: 10px 10px 0 0;
+            color: rgba(237, 242, 248, 0.76);
+        }
+
+        window.ffmpeg-app-window notebook > header > tabs > tab:hover {
+            background: rgba(84, 104, 128, 0.18);
+            color: #f3f7fc;
+        }
+
+        window.ffmpeg-app-window notebook > header > tabs > tab:checked {
+            background: #1d2530;
+            color: #f8fbff;
+            box-shadow: inset 0 -2px 0 #5a9cff;
+        }
+
+        window.ffmpeg-app-window frame > border {
+            background: #141a22;
+            border: none;
+            border-radius: 10px;
+            padding: 5px;
+            box-shadow: none;
+        }
+
+        window.ffmpeg-app-window expander > title {
+            background: #141a22;
+            border: none;
+            border-radius: 10px;
+            padding: 5px 8px;
+            box-shadow: none;
+        }
+
+        window.ffmpeg-app-window expander > title > arrow {
+            color: #76adff;
+        }
+
+        window.ffmpeg-app-window label {
+            color: #edf2f8;
+        }
+
+        window.ffmpeg-app-window .dim-label {
+            color: rgba(237, 242, 248, 0.62);
+        }
+
+        window.ffmpeg-app-window .success {
+            color: #8bdfab;
+        }
+
+        window.ffmpeg-app-window .warning {
+            color: #ffcf7d;
+        }
+
+        window.ffmpeg-app-window .error {
+            color: #ff9898;
+        }
+
+        window.ffmpeg-app-window entry,
+        window.ffmpeg-app-window textview,
+        window.ffmpeg-app-window textview text,
+        window.ffmpeg-app-window spinbutton,
+        window.ffmpeg-app-window spinbutton entry,
+        window.ffmpeg-app-window listview,
+        window.ffmpeg-app-window listbox {
+            background: #0d1218;
+            color: #f2f6fb;
+            border: 1px solid #3d4a5c;
+            border-radius: 8px;
+            box-shadow: none;
+        }
+
+        window.ffmpeg-app-window entry,
+        window.ffmpeg-app-window spinbutton entry {
+            min-height: 16px;
+            padding: 5px 8px;
+            caret-color: #f2f6fb;
+        }
+
+        window.ffmpeg-app-window combobox {
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            padding: 0;
+        }
+
+        window.ffmpeg-app-window spinbutton {
+            padding: 0;
+        }
+
+        window.ffmpeg-app-window spinbutton entry {
+            background: transparent;
+            border: none;
+            border-radius: 0;
+            box-shadow: none;
+        }
+
+        window.ffmpeg-app-window textview text {
+            padding: 6px;
+        }
+
+        window.ffmpeg-app-window entry:focus,
+        window.ffmpeg-app-window spinbutton:focus-within,
+        window.ffmpeg-app-window combobox button:focus,
+        window.ffmpeg-app-window button:focus {
+            border-color: #5d9fff;
+            box-shadow: 0 0 0 1px rgba(93, 159, 255, 0.30);
+        }
+
+        window.ffmpeg-app-window button,
+        window.ffmpeg-app-window combobox button {
+            background: #242c36;
+            color: #eef3f8;
+            border: 1px solid #394454;
+            border-radius: 8px;
+            box-shadow: none;
+            min-width: 64px;
+            min-height: 16px;
+            padding: 5px 10px;
+        }
+
+        window.ffmpeg-app-window button:hover,
+        window.ffmpeg-app-window combobox button:hover {
+            background: #2c3643;
+        }
+
+        window.ffmpeg-app-window button:active,
+        window.ffmpeg-app-window combobox button:active {
+            background: #34404e;
+        }
+
+        window.ffmpeg-app-window button:disabled,
+        window.ffmpeg-app-window combobox button:disabled,
+        window.ffmpeg-app-window entry:disabled,
+        window.ffmpeg-app-window spinbutton:disabled {
+            background: #1c222b;
+            color: rgba(237, 242, 248, 0.42);
+            border-color: #2b3440;
+        }
+
+        window.ffmpeg-app-window combobox arrow {
+            color: #bdd6ff;
+        }
+
+        window.ffmpeg-app-window spinbutton button {
+            padding: 5px 8px;
+            min-width: 22px;
+            min-height: 16px;
+        }
+
+        window.ffmpeg-app-window checkbutton > check {
+            background: #0d1218;
+            border: 1px solid #394454;
+            border-radius: 5px;
+            min-width: 16px;
+            min-height: 16px;
+        }
+
+        window.ffmpeg-app-window checkbutton:checked > check {
+            background: #4f96ff;
+            border-color: #4f96ff;
+        }
+
+        window.ffmpeg-app-window progressbar trough {
+            background: #0d1218;
+            border: 1px solid #394454;
+            border-radius: 999px;
+            min-height: 10px;
+        }
+
+        window.ffmpeg-app-window progressbar progress {
+            background: #5aa2ff;
+            border-radius: 999px;
+        }
+
+        window.ffmpeg-app-window scale trough {
+            background: #0d1218;
+            border: 1px solid #394454;
+            border-radius: 999px;
+            min-height: 6px;
+        }
+
+        window.ffmpeg-app-window scale highlight {
+            background: #5aa2ff;
+            border-radius: 999px;
+        }
+
+        window.ffmpeg-app-window scale slider {
+            background: #dce8ff;
+            border: 2px solid #5aa2ff;
+            border-radius: 999px;
+            min-width: 14px;
+            min-height: 14px;
+            margin: -5px 0;
+        }
+        """
+        self._css_provider = Gtk.CssProvider()
+        self._css_provider.load_from_data(css.encode("utf-8"))
+        display = Gdk.Display.get_default()
+        if display is not None:
+            Gtk.StyleContext.add_provider_for_display(
+                display,
+                self._css_provider,
+                Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
+            )
 
     def on_add_path_clicked(self, _button: Gtk.Button | Gtk.Entry) -> None:
         path = self.path_entry.get_text().strip()

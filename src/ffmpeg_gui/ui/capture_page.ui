@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <object class="GtkBox" id="capture_page_root">
+    <property name="orientation">vertical</property>
+    <property name="spacing">5</property>
+    <child>
+      <object class="GtkFrame">
+        <property name="label">Capture Status</property>
+        <property name="valign">start</property>
+        <child>
+          <object class="GtkBox">
+            <property name="orientation">vertical</property>
+            <property name="spacing">5</property>
+            <property name="margin-top">5</property>
+            <property name="margin-bottom">5</property>
+            <property name="margin-start">5</property>
+            <property name="margin-end">5</property>
+            <property name="valign">start</property>
+            <child><object class="GtkLabel" id="capture_info_label"><property name="label">Waiting for FFmpeg capability scan...</property><property name="xalign">0</property><style><class name="dim-label"/></style></object></child>
+            <child><object class="GtkBox"><property name="orientation">horizontal</property><property name="spacing">5</property><child><object class="GtkButton" id="capture_start_button"><property name="label">Start capture</property></object></child><child><object class="GtkButton" id="capture_stop_button"><property name="label">Stop capture</property><property name="sensitive">False</property></object></child></object></child>
+            <child><object class="GtkLabel" id="capture_status_label"><property name="xalign">0</property><property name="wrap">True</property><property name="visible">False</property></object></child>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="GtkBox">
+        <property name="orientation">horizontal</property>
+        <property name="spacing">5</property>
+        <property name="hexpand">True</property>
+        <child>
+          <object class="GtkFrame">
+            <property name="label">Input &amp; Source</property>
+            <property name="hexpand">True</property>
+            <property name="valign">start</property>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <property name="spacing">5</property>
+                <property name="margin-top">5</property>
+                <property name="margin-bottom">5</property>
+                <property name="margin-start">5</property>
+                <property name="margin-end">5</property>
+                <child><object class="GtkBox"><property name="orientation">horizontal</property><property name="spacing">5</property><child><object class="GtkLabel"><property name="label">Profile</property><property name="xalign">0</property><property name="width-request">95</property></object></child><child><object class="GtkComboBoxText" id="profile_combo"><property name="width-request">240</property></object></child><child><object class="GtkButton" id="apply_profile_button"><property name="label">Apply</property></object></child></object></child>
+                <child><object class="GtkLabel" id="profile_info_label"><property name="xalign">0</property><property name="wrap">True</property><style><class name="dim-label"/></style></object></child>
+                <child><object class="GtkBox"><property name="orientation">horizontal</property><property name="spacing">5</property><child><object class="GtkLabel"><property name="label">Video device</property><property name="xalign">0</property><property name="width-request">95</property></object></child><child><object class="GtkComboBoxText" id="video_device_combo"><property name="width-request">260</property></object></child><child><object class="GtkButton" id="refresh_devices_button"><property name="label">Refresh</property></object></child></object></child>
+                <child><object class="GtkBox"><property name="orientation">horizontal</property><property name="spacing">5</property><child><object class="GtkLabel"><property name="label">Video input</property><property name="xalign">0</property><property name="width-request">95</property></object></child><child><object class="GtkComboBoxText" id="video_input_combo"><property name="width-request">180</property></object></child></object></child>
+                <child><object class="GtkLabel" id="device_hint_label"><property name="xalign">0</property><property name="wrap">True</property><style><class name="dim-label"/></style></object></child>
+                <child><object class="GtkBox"><property name="orientation">horizontal</property><property name="spacing">5</property><child><object class="GtkLabel"><property name="label">Audio source</property><property name="xalign">0</property><property name="width-request">95</property></object></child><child><object class="GtkComboBoxText" id="audio_source_combo"><property name="width-request">220</property></object></child><child><object class="GtkComboBoxText" id="audio_backend_combo"><property name="width-request">145</property></object></child></object></child>
+                <child><object class="GtkBox"><property name="orientation">horizontal</property><property name="spacing">5</property><child><object class="GtkLabel"><property name="label">Input format</property><property name="xalign">0</property><property name="width-request">95</property></object></child><child><object class="GtkComboBoxText" id="video_format_combo"><property name="width-request">170</property></object></child><child><object class="GtkLabel"><property name="label">TV standard</property></object></child><child><object class="GtkComboBoxText" id="video_standard_combo"><property name="width-request">120</property></object></child></object></child>
+                <child><object class="GtkBox"><property name="orientation">horizontal</property><property name="spacing">5</property><child><object class="GtkLabel"><property name="label">Video size</property><property name="xalign">0</property><property name="width-request">95</property></object></child><child><object class="GtkComboBoxText" id="video_size_combo"><property name="width-request">140</property></object></child><child><object class="GtkEntry" id="video_size_entry"><property name="placeholder-text">Custom, e.g. 720x576</property><property name="hexpand">True</property></object></child></object></child>
+                <child><object class="GtkCheckButton" id="use_libv4l2_check"><property name="label">Use libv4l2</property><property name="active">True</property></object></child>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkFrame">
+            <property name="label">Live View &amp; Live Audio</property>
+            <property name="hexpand">True</property>
+            <property name="valign">start</property>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <property name="spacing">5</property>
+                <property name="margin-top">5</property>
+                <property name="margin-bottom">5</property>
+                <property name="margin-start">5</property>
+                <property name="margin-end">5</property>
+                <child><object class="GtkFrame"><child><object class="GtkPicture" id="preview_picture"><property name="content-fit">contain</property><property name="width-request">360</property><property name="height-request">220</property></object></child></object></child>
+                <child><object class="GtkBox"><property name="orientation">horizontal</property><property name="spacing">5</property><child><object class="GtkButton" id="preview_start_button"><property name="label">Start live view</property></object></child><child><object class="GtkButton" id="preview_stop_button"><property name="label">Stop live view</property><property name="sensitive">False</property></object></child><child><object class="GtkCheckButton" id="preview_mute_check"><property name="label">Mute live audio</property></object></child></object></child>
+                <child><object class="GtkBox"><property name="orientation">horizontal</property><property name="spacing">5</property><child><object class="GtkLabel"><property name="label">Volume</property></object></child><child><object class="GtkScale" id="preview_volume_scale"><property name="orientation">horizontal</property><property name="digits">2</property><property name="hexpand">True</property><property name="adjustment"><object class="GtkAdjustment"><property name="lower">0.0</property><property name="upper">2.0</property><property name="step-increment">0.01</property><property name="page-increment">0.1</property><property name="value">1.0</property></object></property></object></child><child><object class="GtkLabel"><property name="label">During capture</property></object></child><child><object class="GtkComboBoxText" id="live_during_capture_combo"><property name="width-request">150</property></object></child></object></child>
+                <child><object class="GtkProgressBar" id="preview_level_bar"><property name="show-text">True</property><property name="text">Audio level</property><property name="fraction">0.0</property></object></child>
+                <child><object class="GtkLabel" id="preview_status_label"><property name="xalign">0</property><style><class name="dim-label"/></style></object></child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="GtkFrame">
+        <property name="label">Capture Output</property>
+        <child>
+          <object class="GtkBox">
+            <property name="orientation">vertical</property>
+            <property name="spacing">5</property>
+            <property name="margin-top">5</property>
+            <property name="margin-bottom">5</property>
+            <property name="margin-start">5</property>
+            <property name="margin-end">5</property>
+            <child><object class="GtkBox"><property name="orientation">horizontal</property><property name="spacing">5</property><child><object class="GtkLabel"><property name="label">Output file</property><property name="xalign">0</property><property name="width-request">95</property></object></child><child><object class="GtkEntry" id="output_entry"><property name="hexpand">True</property></object></child><child><object class="GtkButton" id="output_browse_button"><property name="label">Choose</property></object></child></object></child>
+            <child><object class="GtkBox"><property name="orientation">horizontal</property><property name="spacing">5</property><child><object class="GtkLabel"><property name="label">Container</property><property name="xalign">0</property><property name="width-request">95</property></object></child><child><object class="GtkComboBoxText" id="container_combo"><property name="width-request">110</property></object></child><child><object class="GtkCheckButton" id="show_all_capture_codecs"><property name="label">Show unusable codecs</property></object></child></object></child>
+            <child><object class="GtkBox"><property name="orientation">horizontal</property><property name="spacing">5</property><child><object class="GtkLabel"><property name="label">Video codec</property><property name="xalign">0</property><property name="width-request">95</property></object></child><child><object class="GtkComboBoxText" id="capture_video_codec_combo"><property name="width-request">190</property></object></child><child><object class="GtkEntry" id="capture_video_bitrate_entry"><property name="placeholder-text">6M</property><property name="text">6M</property><property name="width-request">90</property></object></child><child><object class="GtkComboBoxText" id="capture_preset_combo"><property name="width-request">120</property></object></child></object></child>
+            <child><object class="GtkBox"><property name="orientation">horizontal</property><property name="spacing">5</property><child><object class="GtkLabel"><property name="label">Audio codec</property><property name="xalign">0</property><property name="width-request">95</property></object></child><child><object class="GtkComboBoxText" id="capture_audio_codec_combo"><property name="width-request">190</property></object></child><child><object class="GtkEntry" id="capture_audio_bitrate_entry"><property name="placeholder-text">192k</property><property name="text">192k</property><property name="width-request">95</property></object></child><child><object class="GtkEntry" id="capture_tune_entry"><property name="placeholder-text">Optional tune</property><property name="hexpand">True</property></object></child></object></child>
+            <child><object class="GtkBox"><property name="orientation">horizontal</property><property name="spacing">5</property><child><object class="GtkLabel"><property name="label">Audio</property><property name="xalign">0</property><property name="width-request">95</property></object></child><child><object class="GtkLabel"><property name="label">Rate</property></object></child><child><object class="GtkSpinButton" id="sample_rate_spin"><property name="width-request">105</property><property name="adjustment"><object class="GtkAdjustment"><property name="lower">8000</property><property name="upper">192000</property><property name="step-increment">1000</property><property name="page-increment">1000</property><property name="value">48000</property></object></property></object></child><child><object class="GtkLabel"><property name="label">Channels</property></object></child><child><object class="GtkComboBoxText" id="channels_combo"><property name="width-request">75</property></object></child><child><object class="GtkLabel"><property name="label">Cleanup</property></object></child><child><object class="GtkComboBoxText" id="audio_filter_combo"><property name="width-request">165</property></object></child><child><object class="GtkLabel"><property name="label">Gain (dB)</property></object></child><child><object class="GtkSpinButton" id="audio_gain_spin"><property name="width-request">85</property><property name="digits">1</property><property name="adjustment"><object class="GtkAdjustment"><property name="lower">-24.0</property><property name="upper">24.0</property><property name="step-increment">0.5</property><property name="page-increment">1.0</property><property name="value">0.0</property></object></property></object></child></object></child>
+            <child><object class="GtkBox"><property name="orientation">horizontal</property><property name="spacing">5</property><child><object class="GtkLabel"><property name="label">Video</property><property name="xalign">0</property><property name="width-request">95</property></object></child><child><object class="GtkLabel"><property name="label">Pixel format</property></object></child><child><object class="GtkComboBoxText" id="capture_pixfmt_combo"><property name="width-request">165</property></object></child><child><object class="GtkCheckButton" id="match_fps_check"><property name="label">Match source FPS</property><property name="active">True</property></object></child><child><object class="GtkSpinButton" id="output_fps_spin"><property name="digits">3</property><property name="sensitive">False</property><property name="width-request">95</property><property name="adjustment"><object class="GtkAdjustment"><property name="lower">1</property><property name="upper">120</property><property name="step-increment">0.01</property><property name="page-increment">1.0</property><property name="value">25.0</property></object></property></object></child></object></child>
+            <child><object class="GtkBox"><property name="orientation">horizontal</property><property name="spacing">5</property><child><object class="GtkCheckButton" id="deinterlace_check"><property name="label">Deinterlace (yadif)</property></object></child><child><object class="GtkLabel"><property name="label">Extra args</property></object></child><child><object class="GtkEntry" id="capture_extra_entry"><property name="hexpand">True</property><property name="placeholder-text">Optional FFmpeg args</property></object></child></object></child>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="GtkExpander" id="capture_log_expander">
+        <property name="label">Capture log</property>
+        <property name="expanded">True</property>
+        <property name="vexpand">True</property>
+        <child>
+          <object class="GtkBox">
+            <property name="orientation">vertical</property>
+            <property name="spacing">5</property>
+            <property name="margin-top">5</property>
+            <property name="margin-bottom">5</property>
+            <property name="margin-start">5</property>
+            <property name="margin-end">5</property>
+            <child><object class="GtkScrolledWindow"><property name="vexpand">True</property><property name="min-content-height">105</property><child><object class="GtkTextView" id="capture_log_view"><property name="editable">False</property><property name="monospace">True</property></object></child></object></child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

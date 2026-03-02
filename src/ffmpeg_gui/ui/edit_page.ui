@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <object class="GtkBox" id="edit_page_root">
+    <property name="orientation">vertical</property>
+    <property name="spacing">5</property>
+    <child>
+      <object class="GtkFrame">
+        <property name="label">Edit Status</property>
+        <property name="valign">start</property>
+        <child>
+          <object class="GtkBox">
+            <property name="orientation">vertical</property>
+            <property name="spacing">5</property>
+            <property name="margin-top">5</property>
+            <property name="margin-bottom">5</property>
+            <property name="margin-start">5</property>
+            <property name="margin-end">5</property>
+            <property name="valign">start</property>
+            <child>
+              <object class="GtkLabel" id="info_label">
+                <property name="label">Load a captured file to preview and export corrections.</property>
+                <property name="xalign">0</property>
+                <style><class name="dim-label"/></style>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">5</property>
+                <child><object class="GtkButton" id="start_button"><property name="label">Start export</property></object></child>
+                <child><object class="GtkButton" id="stop_button"><property name="label">Stop export</property><property name="sensitive">False</property></object></child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel" id="status_label">
+                <property name="xalign">0</property>
+                <property name="wrap">True</property>
+                <property name="visible">False</property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="GtkBox">
+        <property name="orientation">horizontal</property>
+        <property name="spacing">5</property>
+        <property name="hexpand">True</property>
+        <child>
+          <object class="GtkFrame">
+            <property name="label">Source</property>
+            <property name="hexpand">True</property>
+            <property name="valign">start</property>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <property name="spacing">5</property>
+                <property name="margin-top">5</property>
+                <property name="margin-bottom">5</property>
+                <property name="margin-start">5</property>
+                <property name="margin-end">5</property>
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">5</property>
+                    <child><object class="GtkEntry" id="source_entry"><property name="placeholder-text">Input media file</property><property name="hexpand">True</property></object></child>
+                    <child><object class="GtkButton" id="source_pick_button"><property name="label">Choose</property></object></child>
+                  </object>
+                </child>
+                <child><object class="GtkLabel"><property name="label">Use this tab for post-capture fixes: sync, picture corrections, denoise and export.</property><property name="xalign">0</property><property name="wrap">True</property><style><class name="dim-label"/></style></object></child>
+                <child><object class="GtkLabel" id="source_meta_label"><property name="label">No source loaded.</property><property name="xalign">0</property><property name="wrap">True</property><style><class name="dim-label"/></style></object></child>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkFrame">
+            <property name="label">Export Output</property>
+            <property name="hexpand">True</property>
+            <property name="valign">start</property>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <property name="spacing">5</property>
+                <property name="margin-top">5</property>
+                <property name="margin-bottom">5</property>
+                <property name="margin-start">5</property>
+                <property name="margin-end">5</property>
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">5</property>
+                    <child><object class="GtkEntry" id="output_entry"><property name="placeholder-text">Output file</property><property name="hexpand">True</property></object></child>
+                    <child><object class="GtkButton" id="out_pick_button"><property name="label">Choose</property></object></child>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">5</property>
+                    <child><object class="GtkLabel"><property name="label">Mode</property></object></child>
+                    <child><object class="GtkComboBoxText" id="output_mode_combo"><property name="width-request">150</property></object></child>
+                    <child><object class="GtkLabel"><property name="label">Container</property></object></child>
+                    <child><object class="GtkComboBoxText" id="container_combo"><property name="width-request">100</property></object></child>
+                    <child><object class="GtkLabel"><property name="label">Video codec</property></object></child>
+                    <child><object class="GtkComboBoxText" id="video_codec_combo"><property name="width-request">160</property></object></child>
+                    <child><object class="GtkEntry" id="video_bitrate_entry"><property name="placeholder-text">6M</property><property name="text">6M</property><property name="width-request">90</property></object></child>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">5</property>
+                    <child><object class="GtkLabel"><property name="label">Audio codec</property></object></child>
+                    <child><object class="GtkComboBoxText" id="audio_codec_combo"><property name="width-request">150</property></object></child>
+                    <child><object class="GtkEntry" id="audio_bitrate_entry"><property name="placeholder-text">192k</property><property name="text">192k</property><property name="width-request">95</property></object></child>
+                    <child><object class="GtkLabel"><property name="label">Rate</property></object></child>
+                    <child><object class="GtkSpinButton" id="sample_rate_spin"><property name="width-request">100</property><property name="adjustment"><object class="GtkAdjustment"><property name="lower">8000</property><property name="upper">192000</property><property name="step-increment">1000</property><property name="page-increment">1000</property><property name="value">48000</property></object></property></object></child>
+                    <child><object class="GtkLabel"><property name="label">Channels</property></object></child>
+                    <child><object class="GtkComboBoxText" id="channels_combo"><property name="width-request">75</property></object></child>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">5</property>
+                    <child><object class="GtkCheckButton" id="match_fps_check"><property name="label">Match source FPS</property><property name="active">True</property></object></child>
+                    <child><object class="GtkSpinButton" id="output_fps_spin"><property name="digits">3</property><property name="sensitive">False</property><property name="width-request">95</property><property name="adjustment"><object class="GtkAdjustment"><property name="lower">1</property><property name="upper">120</property><property name="step-increment">0.01</property><property name="page-increment">1.0</property><property name="value">25.0</property></object></property></object></child>
+                    <child><object class="GtkLabel"><property name="label">Pixel format</property></object></child>
+                    <child><object class="GtkComboBoxText" id="pix_fmt_combo"><property name="width-request">150</property></object></child>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="GtkFrame">
+        <property name="label">Trim</property>
+        <child>
+          <object class="GtkBox">
+            <property name="orientation">vertical</property>
+            <property name="spacing">5</property>
+            <property name="margin-top">5</property>
+            <property name="margin-bottom">5</property>
+            <property name="margin-start">5</property>
+            <property name="margin-end">5</property>
+            <child><object class="GtkLabel" id="trim_summary_label"><property name="label">Load a file to set clip start and end.</property><property name="xalign">0</property><style><class name="dim-label"/></style></object></child>
+            <child><object class="GtkBox"><property name="orientation">horizontal</property><property name="spacing">5</property><child><object class="GtkLabel"><property name="label">Start</property></object></child><child><object class="GtkLabel" id="trim_start_label"><property name="label">00:00.000</property><property name="width-chars">12</property><property name="xalign">0.0</property></object></child><child><object class="GtkBox" id="trim_range_placeholder"><property name="hexpand">True</property></object></child><child><object class="GtkLabel"><property name="label">End</property></object></child><child><object class="GtkLabel" id="trim_end_label"><property name="label">00:00.000</property><property name="width-chars">12</property><property name="xalign">0.0</property></object></child></object></child>
+            <child><object class="GtkBox"><property name="orientation">horizontal</property><property name="spacing">5</property><child><object class="GtkButton" id="trim_set_start_button"><property name="label">Set start from playhead</property><property name="sensitive">False</property></object></child><child><object class="GtkButton" id="trim_set_end_button"><property name="label">Set end from playhead</property><property name="sensitive">False</property></object></child></object></child>
+            <child><object class="GtkBox"><property name="orientation">horizontal</property><property name="spacing">5</property><child><object class="GtkLabel"><property name="label">Start</property></object></child><child><object class="GtkButton" id="trim_start_prev_frame_button"><property name="label">-1f</property><property name="sensitive">False</property></object></child><child><object class="GtkButton" id="trim_start_next_frame_button"><property name="label">+1f</property><property name="sensitive">False</property></object></child><child><object class="GtkSeparator"><property name="orientation">vertical</property></object></child><child><object class="GtkLabel"><property name="label">End</property></object></child><child><object class="GtkButton" id="trim_end_prev_frame_button"><property name="label">-1f</property><property name="sensitive">False</property></object></child><child><object class="GtkButton" id="trim_end_next_frame_button"><property name="label">+1f</property><property name="sensitive">False</property></object></child></object></child>
+            <child><object class="GtkLabel"><property name="label">Use the player timeline to seek, then set trim start/end from the current playhead.</property><property name="xalign">0</property><property name="wrap">True</property><style><class name="dim-label"/></style></object></child>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="GtkBox">
+        <property name="orientation">horizontal</property>
+        <property name="spacing">5</property>
+        <property name="hexpand">True</property>
+        <child>
+          <object class="GtkFrame">
+            <property name="label">Live Preview</property>
+            <property name="hexpand">True</property>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <property name="spacing">5</property>
+                <property name="margin-top">5</property>
+                <property name="margin-bottom">5</property>
+                <property name="margin-start">5</property>
+                <property name="margin-end">5</property>
+                <child><object class="GtkFrame"><child><object class="GtkPicture" id="preview_picture"><property name="content-fit">contain</property><property name="width-request">420</property><property name="height-request">250</property><property name="focusable">True</property></object></child></object></child>
+                <child><object class="GtkBox"><property name="orientation">horizontal</property><property name="spacing">5</property><child><object class="GtkButton" id="preview_start_button"><property name="label">Play</property></object></child><child><object class="GtkButton" id="preview_pause_button"><property name="label">Pause</property><property name="sensitive">False</property></object></child><child><object class="GtkButton" id="preview_stop_button"><property name="label">Stop preview</property><property name="sensitive">False</property></object></child><child><object class="GtkCheckButton" id="preview_mute_check"><property name="label">Mute</property></object></child><child><object class="GtkLabel"><property name="label">Volume</property></object></child><child><object class="GtkScale" id="preview_volume_scale"><property name="orientation">horizontal</property><property name="digits">2</property><property name="hexpand">True</property><property name="adjustment"><object class="GtkAdjustment"><property name="lower">0.0</property><property name="upper">2.0</property><property name="step-increment">0.01</property><property name="page-increment">0.1</property><property name="value">1.0</property></object></property></object></child></object></child>
+                <child><object class="GtkBox"><property name="orientation">horizontal</property><property name="spacing">5</property><child><object class="GtkLabel" id="preview_position_label"><property name="label">00:00.000</property><property name="width-chars">12</property><property name="xalign">0.0</property></object></child><child><object class="GtkScale" id="preview_seek_scale"><property name="orientation">horizontal</property><property name="draw-value">False</property><property name="hexpand">True</property><property name="sensitive">False</property><property name="adjustment"><object class="GtkAdjustment"><property name="lower">0.0</property><property name="upper">1.0</property><property name="step-increment">0.01</property><property name="page-increment">0.1</property><property name="value">0.0</property></object></property></object></child><child><object class="GtkLabel" id="preview_duration_label"><property name="label">00:00.000</property><property name="width-chars">12</property><property name="xalign">1.0</property></object></child></object></child>
+                <child><object class="GtkLabel" id="preview_status_label"><property name="xalign">0</property><style><class name="dim-label"/></style></object></child>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkFrame">
+            <property name="label">Corrections</property>
+            <property name="hexpand">True</property>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <property name="spacing">5</property>
+                <property name="margin-top">5</property>
+                <property name="margin-bottom">5</property>
+                <property name="margin-start">5</property>
+                <property name="margin-end">5</property>
+                <child><object class="GtkBox"><property name="orientation">horizontal</property><property name="spacing">5</property><child><object class="GtkLabel"><property name="label">Audio delay (ms)</property><property name="width-request">125</property><property name="xalign">0</property></object></child><child><object class="GtkSpinButton" id="audio_delay_spin"><property name="width-request">110</property><property name="adjustment"><object class="GtkAdjustment"><property name="lower">-2000</property><property name="upper">2000</property><property name="step-increment">10</property><property name="page-increment">100</property><property name="value">0</property></object></property></object></child></object></child>
+                <child><object class="GtkLabel"><property name="label">Positive values delay audio, negative values advance audio.</property><property name="xalign">0</property><property name="wrap">True</property><style><class name="dim-label"/></style></object></child>
+                <child><object class="GtkBox"><property name="orientation">horizontal</property><property name="spacing">5</property><child><object class="GtkLabel"><property name="label">Deinterlace</property><property name="width-request">125</property><property name="xalign">0</property></object></child><child><object class="GtkCheckButton" id="deinterlace_check"><property name="label">Enable</property></object></child></object></child>
+                <child><object class="GtkLabel"><property name="label">Removes combing artifacts from interlaced VHS fields.</property><property name="xalign">0</property><property name="wrap">True</property><style><class name="dim-label"/></style></object></child>
+                <child><object class="GtkBox"><property name="orientation">horizontal</property><property name="spacing">5</property><child><object class="GtkLabel"><property name="label">Denoise</property><property name="width-request">125</property><property name="xalign">0</property></object></child><child><object class="GtkCheckButton" id="denoise_check"><property name="label">Enable</property></object></child><child><object class="GtkSpinButton" id="denoise_strength_spin"><property name="digits">1</property><property name="width-request">80</property><property name="adjustment"><object class="GtkAdjustment"><property name="lower">0.5</property><property name="upper">3.0</property><property name="step-increment">0.1</property><property name="page-increment">0.5</property><property name="value">1.0</property></object></property></object></child></object></child>
+                <child><object class="GtkLabel"><property name="label">Temporal-spatial cleanup (hqdn3d). Higher values remove more noise but can blur detail.</property><property name="xalign">0</property><property name="wrap">True</property><style><class name="dim-label"/></style></object></child>
+                <child><object class="GtkBox"><property name="orientation">horizontal</property><property name="spacing">5</property><child><object class="GtkLabel"><property name="label">Brightness</property><property name="width-request">125</property><property name="xalign">0</property></object></child><child><object class="GtkScale" id="brightness_scale"><property name="orientation">horizontal</property><property name="digits">2</property><property name="hexpand">True</property><property name="adjustment"><object class="GtkAdjustment"><property name="lower">-0.2</property><property name="upper">0.2</property><property name="step-increment">0.01</property><property name="page-increment">0.05</property><property name="value">0.0</property></object></property></object></child></object></child>
+                <child><object class="GtkLabel"><property name="label">Lifts or lowers luma. Keep low to avoid clipping highlights/shadows.</property><property name="xalign">0</property><property name="wrap">True</property><style><class name="dim-label"/></style></object></child>
+                <child><object class="GtkBox"><property name="orientation">horizontal</property><property name="spacing">5</property><child><object class="GtkLabel"><property name="label">Contrast</property><property name="width-request">125</property><property name="xalign">0</property></object></child><child><object class="GtkScale" id="contrast_scale"><property name="orientation">horizontal</property><property name="digits">2</property><property name="hexpand">True</property><property name="adjustment"><object class="GtkAdjustment"><property name="lower">0.5</property><property name="upper">2.0</property><property name="step-increment">0.01</property><property name="page-increment">0.05</property><property name="value">1.0</property></object></property></object></child></object></child>
+                <child><object class="GtkLabel"><property name="label">Adjusts separation between dark and bright parts of the image.</property><property name="xalign">0</property><property name="wrap">True</property><style><class name="dim-label"/></style></object></child>
+                <child><object class="GtkBox"><property name="orientation">horizontal</property><property name="spacing">5</property><child><object class="GtkLabel"><property name="label">Saturation</property><property name="width-request">125</property><property name="xalign">0</property></object></child><child><object class="GtkScale" id="saturation_scale"><property name="orientation">horizontal</property><property name="digits">2</property><property name="hexpand">True</property><property name="adjustment"><object class="GtkAdjustment"><property name="lower">0.0</property><property name="upper">2.0</property><property name="step-increment">0.01</property><property name="page-increment">0.05</property><property name="value">1.0</property></object></property></object></child></object></child>
+                <child><object class="GtkLabel"><property name="label">Controls color intensity. Lower values reduce color noise, higher values boost color.</property><property name="xalign">0</property><property name="wrap">True</property><style><class name="dim-label"/></style></object></child>
+                <child><object class="GtkBox"><property name="orientation">horizontal</property><property name="spacing">5</property><child><object class="GtkLabel"><property name="label">Audio gain (dB)</property><property name="width-request">125</property><property name="xalign">0</property></object></child><child><object class="GtkSpinButton" id="audio_gain_spin"><property name="digits">1</property><property name="width-request">90</property><property name="adjustment"><object class="GtkAdjustment"><property name="lower">-24.0</property><property name="upper">24.0</property><property name="step-increment">0.5</property><property name="page-increment">1.0</property><property name="value">0.0</property></object></property></object></child></object></child>
+                <child><object class="GtkLabel"><property name="label">Linear level adjustment. Use small steps to avoid clipping.</property><property name="xalign">0</property><property name="wrap">True</property><style><class name="dim-label"/></style></object></child>
+                <child><object class="GtkBox"><property name="orientation">horizontal</property><property name="spacing">5</property><child><object class="GtkLabel"><property name="label">Audio filters (Hz)</property><property name="width-request">125</property><property name="xalign">0</property></object></child><child><object class="GtkLabel"><property name="label">HP</property></object></child><child><object class="GtkSpinButton" id="highpass_spin"><property name="width-request">80</property><property name="adjustment"><object class="GtkAdjustment"><property name="lower">0</property><property name="upper">500</property><property name="step-increment">5</property><property name="page-increment">25</property><property name="value">0</property></object></property></object></child><child><object class="GtkLabel"><property name="label">LP</property></object></child><child><object class="GtkSpinButton" id="lowpass_spin"><property name="width-request">90</property><property name="adjustment"><object class="GtkAdjustment"><property name="lower">0</property><property name="upper">20000</property><property name="step-increment">100</property><property name="page-increment">500</property><property name="value">0</property></object></property></object></child></object></child>
+                <child><object class="GtkLabel"><property name="label">HP removes low rumble, LP removes high hiss. 0 disables each filter.</property><property name="xalign">0</property><property name="wrap">True</property><style><class name="dim-label"/></style></object></child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="GtkExpander" id="edit_log_expander">
+        <property name="label">Export log</property>
+        <property name="expanded">True</property>
+        <property name="vexpand">True</property>
+        <child>
+          <object class="GtkBox">
+            <property name="orientation">vertical</property>
+            <property name="spacing">5</property>
+            <property name="margin-top">5</property>
+            <property name="margin-bottom">5</property>
+            <property name="margin-start">5</property>
+            <property name="margin-end">5</property>
+            <child><object class="GtkScrolledWindow"><property name="vexpand">True</property><property name="min-content-height">105</property><child><object class="GtkTextView" id="log_view"><property name="editable">False</property><property name="monospace">True</property></object></child></object></child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <object class="GtkBox" id="hardware_page_root">
+    <property name="orientation">vertical</property>
+    <property name="spacing">5</property>
+    <property name="margin-top">5</property>
+    <property name="margin-bottom">5</property>
+    <property name="margin-start">5</property>
+    <property name="margin-end">5</property>
+    <child>
+      <object class="GtkFrame">
+        <property name="label">FFmpeg</property>
+        <child>
+          <object class="GtkBox">
+            <property name="orientation">vertical</property>
+            <property name="spacing">5</property>
+            <property name="margin-top">5</property>
+            <property name="margin-bottom">5</property>
+            <property name="margin-start">5</property>
+            <property name="margin-end">5</property>
+            <child><object class="GtkLabel" id="command_label"><property name="label">Command: (detecting...)</property><property name="xalign">0</property><property name="wrap">True</property></object></child>
+            <child><object class="GtkLabel" id="version_label"><property name="label">Version: (detecting...)</property><property name="xalign">0</property><property name="wrap">True</property></object></child>
+            <child><object class="GtkLabel" id="error_label"><property name="xalign">0</property><property name="wrap">True</property><style><class name="error"/></style></object></child>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="GtkFrame">
+        <property name="label">Hardware Acceleration</property>
+        <child>
+          <object class="GtkBox">
+            <property name="orientation">vertical</property>
+            <property name="spacing">5</property>
+            <property name="margin-top">5</property>
+            <property name="margin-bottom">5</property>
+            <property name="margin-start">5</property>
+            <property name="margin-end">5</property>
+            <child><object class="GtkScrolledWindow"><property name="vexpand">True</property><property name="min-content-height">180</property><child><object class="GtkListBox" id="render_list"><property name="selection-mode">none</property></object></child></object></child>
+            <child><object class="GtkLabel" id="status_label"><property name="xalign">0</property><property name="wrap">True</property></object></child>
+            <child><object class="GtkLabel" id="hardware_label"><property name="xalign">0</property><property name="wrap">True</property><style><class name="dim-label"/></style></object></child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>
