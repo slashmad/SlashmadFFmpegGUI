@@ -1,6 +1,14 @@
-# SlashmadFFmpegGUI
-
-GTK4 frontend for FFmpeg maintained by `slashmad`, focused on timelapse, capture, review, trimming, cleanup, and export workflows.
+<table>
+  <tr>
+    <td width="132" valign="top">
+      <img src="data/icons/slashmadffmepgui-neon-icon.png" alt="Slashmad FFmpeg GUI icon" width="120">
+    </td>
+    <td valign="top">
+      <h1>SlashmadFFmpegGUI</h1>
+      <p>GTK4 frontend for FFmpeg maintained by <code>slashmad</code>, focused on timelapse, capture, review, trimming, cleanup, and export workflows.</p>
+    </td>
+  </tr>
+</table>
 
 Repository:
 `https://github.com/slashmad/SlashmadFFmpegGUI`
@@ -163,3 +171,12 @@ This project is intended to be discoverable for common Linux video digitizing an
 - `analog video capture Linux`
 - `FFmpeg VHS capture GUI`
 - `Linux USB video capture GUI`
+
+## Screenshots
+
+<p>
+  <img src="data/screenshots/01timelapse.png" alt="Timelapse workflow" width="24%">
+  <img src="data/screenshots/02capture.png" alt="Capture workflow" width="24%">
+  <img src="data/screenshots/03edit.png" alt="Edit workflow" width="24%">
+  <img src="data/screenshots/04hardware.png" alt="Hardware workflow" width="24%">
+</p>
