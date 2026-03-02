@@ -87,15 +87,24 @@ sudo modprobe em28xx_v4l
 Typical dependencies:
 
 - `python3`
+- `python3-pip` for `pip install -e .`
 - `python3-gobject`
 - `gtk4`
-- `ffmpeg`
+- `ffmpeg` (includes `ffprobe`)
 - `v4l-utils`
-- `pipewire-utils` or PulseAudio tooling
+- `alsa-utils` for `arecord`
+- `pulseaudio-utils` for `pactl`
 - `gstreamer1`
+- `gstreamer1-plugins-base`
 - `gstreamer1-plugins-good`
 - `gstreamer1-plugins-bad-free`
 - `gstreamer1-plugins-bad-free-gtk4`
+
+Optional but useful:
+
+- `pipewire-utils` for extra PipeWire diagnostics outside the app
+- `flatpak`
+- `flatpak-builder`
 
 Run in development mode:
 
