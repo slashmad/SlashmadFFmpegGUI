@@ -3,15 +3,17 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "ffmpeg-gui"
+name = "slashmad-ffmpeg-gui"
 version = "0.1.0"
-description = "GTK4 GUI for FFmpeg"
+description = "GTK4 FFmpeg capture, edit, and encode GUI by slashmad"
 readme = "README.md"
 requires-python = ">=3.10"
-license = {text = "MIT"}
+license = {file = "LICENSE"}
+authors = [{name = "slashmad"}]
+urls = {Repository = "https://github.com/slashmad/SlashmadFFmpegGUI", Issues = "https://github.com/slashmad/SlashmadFFmpegGUI/issues"}
 
 [project.scripts]
-ffmpeg-gui = "ffmpeg_gui.app:main"
+slashmad-ffmpeg-gui = "ffmpeg_gui.app:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

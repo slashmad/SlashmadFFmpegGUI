@@ -1,0 +1,33 @@
+app-id: com.slashmad.SlashmadFFmpegGUI
+runtime: org.gnome.Platform
+runtime-version: "48"
+sdk: org.gnome.Sdk
+command: slashmad-ffmpeg-gui
+finish-args:
+  - --share=network
+  - --share=ipc
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --socket=pulseaudio
+  - --device=all
+  - --talk-name=org.freedesktop.Flatpak
+  - --filesystem=/run/udev:ro
+  - --filesystem=/mnt
+  - --filesystem=/media
+  - --filesystem=/run/media
+  - --filesystem=xdg-download
+  - --filesystem=xdg-videos
+modules:
+  - name: ffmpeg-gui
+    buildsystem: simple
+    build-commands:
+      - pip3 install --prefix=/app --no-deps --no-build-isolation .
+      - mkdir -p /app/share/applications /app/share/metainfo /app/share/icons/hicolor/scalable/apps /app/share/doc/slashmad-ffmpeg-gui
+      - cp data/com.slashmad.SlashmadFFmpegGUI.desktop /app/share/applications/com.slashmad.SlashmadFFmpegGUI.desktop
+      - cp data/com.slashmad.SlashmadFFmpegGUI.metainfo.xml /app/share/metainfo/com.slashmad.SlashmadFFmpegGUI.metainfo.xml
+      - cp data/icons/hicolor/scalable/apps/com.slashmad.SlashmadFFmpegGUI.svg /app/share/icons/hicolor/scalable/apps/com.slashmad.SlashmadFFmpegGUI.svg
+      - cp README.md /app/share/doc/slashmad-ffmpeg-gui/README.md
+      - cp LICENSE /app/share/doc/slashmad-ffmpeg-gui/LICENSE
+    sources:
+      - type: dir
+        path: ..

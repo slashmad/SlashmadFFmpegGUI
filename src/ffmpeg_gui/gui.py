@@ -52,7 +52,7 @@ PRESETS_NVENC = [
 class MainWindow(Gtk.ApplicationWindow):
     def __init__(self, app: Gtk.Application):
         super().__init__(application=app)
-        self.set_title(_("Timelapse FFmpeg GUI"))
+        self.set_title(_("Slashmad FFmpeg GUI"))
         self.set_default_size(900, 720)
         self.set_resizable(True)
         self.set_decorated(True)
@@ -73,7 +73,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.runner = FFmpegRunner(self._on_runner_output, self._on_runner_exit)
 
         header = Gtk.HeaderBar()
-        header.set_title_widget(Gtk.Label(label=_("Timelapse FFmpeg GUI")))
+        header.set_title_widget(Gtk.Label(label=_("Slashmad FFmpeg GUI")))
         self.set_titlebar(header)
 
         refresh_button = Gtk.Button(label=_("Rescan"))

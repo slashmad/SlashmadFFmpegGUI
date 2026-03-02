@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.slashmad.SlashmadFFmpegGUI</id>
+  <name>Slashmad FFmpeg GUI</name>
+  <summary>GTK4 FFmpeg capture, editing, and encoding workflow for slashmad</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <developer_name>slashmad</developer_name>
+  <url type="homepage">https://github.com/slashmad/SlashmadFFmpegGUI</url>
+  <url type="bugtracker">https://github.com/slashmad/SlashmadFFmpegGUI/issues</url>
+  <url type="vcs-browser">https://github.com/slashmad/SlashmadFFmpegGUI</url>
+  <description>
+    <p>Slashmad FFmpeg GUI is a GTK4 desktop frontend for FFmpeg focused on analog capture, post-capture cleanup, and controlled exports.</p>
+    <ul>
+      <li>Capture VHS and other analog sources from USB, PCI, and PCIe hardware.</li>
+      <li>Monitor live video and audio, then trim and inspect files inside the app.</li>
+      <li>Export archive, delivery, or proxy outputs with explicit FFmpeg settings.</li>
+      <li>Review hardware acceleration support and exact generated FFmpeg commands.</li>
+    </ul>
+  </description>
+  <screenshots>
+    <screenshot type="default">
+      <image width="1689" height="1558">https://raw.githubusercontent.com/slashmad/SlashmadFFmpegGUI/main/data/screenshots/encode.png</image>
+    </screenshot>
+    <screenshot>
+      <image width="1689" height="1558">https://raw.githubusercontent.com/slashmad/SlashmadFFmpegGUI/main/data/screenshots/hardware.png</image>
+    </screenshot>
+  </screenshots>
+  <launchable type="desktop-id">com.slashmad.SlashmadFFmpegGUI.desktop</launchable>
+  <content_rating type="oars-1.1" />
+</component>

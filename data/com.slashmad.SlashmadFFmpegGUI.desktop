@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Slashmad FFmpeg GUI
+Comment=GTK4 FFmpeg capture, editing, and encoding GUI by slashmad
+Exec=slashmad-ffmpeg-gui
+Terminal=false
+Type=Application
+Icon=com.slashmad.SlashmadFFmpegGUI
+Categories=AudioVideo;Video;

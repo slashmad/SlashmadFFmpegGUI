@@ -1,8 +1,0 @@
-[Desktop Entry]
-Name=Timelapse FFmpeg GUI
-Comment=GTK4 timelapse GUI for FFmpeg
-Exec=ffmpeg-gui
-Terminal=false
-Type=Application
-Icon=com.slashmad.TimelapseFFmpegGUI
-Categories=AudioVideo;Video;

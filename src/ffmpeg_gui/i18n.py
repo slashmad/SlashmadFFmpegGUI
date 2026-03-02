@@ -5,7 +5,7 @@ import locale
 import os
 
 
-APP_ID = "com.slashmad.TimelapseFFmpegGUI"
+APP_ID = "com.slashmad.SlashmadFFmpegGUI"
 
 
 def setup_gettext() -> None:

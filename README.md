@@ -1,65 +1,63 @@
-# FFmpeg GUI (GTK4)
+# SlashmadFFmpegGUI
 
-A lightweight GTK4 GUI for FFmpeg with hardware-acceleration detection.
+GTK4 frontend for FFmpeg maintained by `slashmad`, focused on capture, review, trimming, cleanup, and export workflows.
+
+Repository:
+`https://github.com/slashmad/SlashmadFFmpegGUI`
+
+License:
+`GPL-3.0-or-later`
 
 ## Features
 
-- Paste paths, pick files/folders, or drag-and-drop images.
-- Output defaults to the same folder as your images.
-- Choose codec, preset, quality (CRF/CQ), pixel format, FPS, tune, and extra FFmpeg args.
-- Supports common image formats plus RAW (if your FFmpeg build supports it).
-- Dedicated **Capture** tab for VHS/USB/PCI capture workflows.
-- Dedicated **Edit** tab for post-capture correction with in-app preview.
-- Live video + live audio monitoring in-app with independent mute/volume controls.
-- Capture profiles (archive/delivery/proxy), source format selection, and FFmpeg command preview.
-- Analog source input selector (for devices that expose it), e.g. `Composite` / `S-Video`.
-- Live-during-capture policy (`Stop`, `Keep`, `Auto-fallback`) with watchdog-based audio recovery.
-- Audio cleanup presets (hum filter/cleanup) and gain controls for noisy analog captures.
-- `Keep`/`Auto-fallback` now use a single-device monitor stream during capture (preview comes from the same FFmpeg process instead of opening `/dev/video*` twice).
+- FFmpeg encode workflow with hardware-acceleration detection.
+- Dedicated `Capture` tab for VHS, USB, PCI, and PCIe capture devices.
+- Dedicated `Edit` tab with in-app playback, trim controls, frame stepping, and export.
+- Live video and live audio monitoring with independent mute and volume control.
+- Capture profiles for archive, delivery, and proxy outputs.
+- Analog source input selection for devices exposing `Composite` / `S-Video`.
+- Explicit FFmpeg command preview for capture and export jobs.
+- Flatpak support with host-device discovery via `flatpak-spawn --host`.
 
 ## Edit Workflow Notes
 
-- Load a captured media file in the `Edit` tab.
-- Preview corrections live (brightness, contrast, saturation, deinterlace, and denoise when available).
-- Adjust audio/video sync with `Audio delay (ms)`.
-- Export with selected codecs/container and review generated FFmpeg command before running.
+- Load a captured file in `Edit`.
+- Use the built-in player transport (`Play`, `Pause`, seek timeline) to inspect the source.
+- `Left` / `Right` steps backward or forward by one frame in preview.
+- `Shift+Left` / `Shift+Right` jumps one second.
+- The trim bar uses one combined range with `start` and `end` handles.
+- Click a trim handle and use arrow keys to nudge that specific handle.
+- Use the dedicated `-1f` / `+1f` buttons under the trim bar for manual frame-accurate start/end adjustment.
+- Default export mode is `Keep source streams`, which trims/remuxes without re-encoding.
+- Switch to `Re-encode` when applying denoise, deinterlace, color correction, sync changes, or new codecs.
 
-## Troubleshooting
+## VHS Capture Notes
 
-- If app preview/capture crashes with NVIDIA + GTK4 stack traces (`gsk_vulkan`, `libnvidia-glcore`), run with:
-  - `GSK_RENDERER=ngl ./dev_run.sh`
-- The app now defaults to `GSK_RENDERER=ngl` unless you override it.
+- For em28xx-based hardware, `Live during capture = Stop live view` is still the most stable path.
+- `Auto-fallback` can be used if you want monitoring during capture and accept fallback to lighter preview behavior when needed.
+- The app keeps default archive capture as raw stereo with no tonal cleanup enabled by default.
+- Prefer stable ALSA identifiers shown in the UI (`plughw:CARD=...,DEV=...`) over boot-dependent `hw:X,Y` numbers.
 
-## VHS Capture Notes (Magix / em28xx)
-
-- For best stability on em28xx devices, use `Live during capture = Stop live view`.
-- If you want simultaneous monitoring and capture, use `Auto-fallback`; the app will fall back to video-only preview if live audio fails.
-- In `Keep`/`Auto-fallback`, the app starts capture first and then previews from an internal local UDP monitor stream, reducing V4L2 contention.
-- The app keeps default capture as raw stereo (`Channels = 2`, `Audio cleanup = Off`, `Gain = 0.0 dB`).
-- If you have analog hum/noise, enable one of the cleanup presets (`Hum 50 Hz + cleanup` is usually correct in Sweden/Europe).
-- ALSA card indices (`hw:1,0`, `hw:2,0`) can change between boots; prefer stable source names shown in the UI (`plughw:CARD=...,DEV=...`).
-
-Suggested VHS archive baseline:
+Suggested archive baseline:
 
 - Profile: `VHS Archive (FFV1 + PCM)`
 - Container: `MKV`
 - Video codec: `ffv1`
 - Audio codec: `pcm_s16le`
 - TV standard: `PAL`
-- Input format: `YUYV` (mapped to FFmpeg `yuyv422`)
+- Input format: `YUYV` mapped to FFmpeg `yuyv422`
 
-Approximate profile size rates (shown in the Capture UI when selecting a profile):
+Approximate size rates shown in the UI:
 
-- `VHS Archive (FFV1 + PCM)`: about `~19.4 GiB/h` (`~19893 MiB/h`) on current sample setup (content-dependent).
-- `VHS Delivery (H.264 + AAC)`: about `~2.6 GiB/h` (`~2657 MiB/h`) with `6M + 192k` (capture-safe defaults: `ultrafast`, cleanup `off`).
-- `VHS Proxy (MJPEG + PCM)`: about `~9.0 GiB/h` (`~9242 MiB/h`) using typical MJPEG assumptions.
+- `VHS Archive (FFV1 + PCM)`: about `~19.4 GiB/h`
+- `VHS Delivery (H.264 + AAC)`: about `~2.6 GiB/h`
+- `VHS Proxy (MJPEG + PCM)`: about `~9.0 GiB/h`
 
-### Magix S-Video fix (em28xx `card=105`)
+## Magix S-Video Fix (em28xx `card=105`)
 
-Some Linux setups auto-detect Magix USB Videowandler with a board profile where `S-Video` does not route correctly.
 If `Composite` works but `S-Video` is black, force em28xx board profile `105`.
 
-Temporary test (until reboot):
+Temporary test:
 
 ```bash
 sudo modprobe -r em28xx_v4l em28xx_alsa em28xx
@@ -70,12 +68,12 @@ sudo modprobe em28xx_v4l
 Permanent setup:
 
 ```bash
-sudo tee /etc/modprobe.d/em28xx-magix.conf >/dev/null <<'EOF'
+sudo tee /etc/modprobe.d/em28xx-magix.conf >/dev/null <<'EOF2'
 options em28xx card=105 usb_xfer_mode=1
-EOF
+EOF2
 ```
 
-Then reconnect the USB device or reload modules:
+Reload modules:
 
 ```bash
 sudo modprobe -r em28xx_v4l em28xx_alsa em28xx
@@ -83,77 +81,69 @@ sudo modprobe em28xx
 sudo modprobe em28xx_v4l
 ```
 
-## Run locally (Fedora)
+## Run Locally (Fedora)
 
-Install dependencies (package names may vary by Fedora version):
+Typical dependencies:
 
 - `python3`
 - `python3-gobject`
 - `gtk4`
 - `ffmpeg`
 - `v4l-utils`
-- `pipewire-utils` (or PulseAudio tooling)
+- `pipewire-utils` or PulseAudio tooling
 - `gstreamer1`
 - `gstreamer1-plugins-good`
 - `gstreamer1-plugins-bad-free`
-- `gstreamer1-plugins-bad-free-gtk4` (for embedded live video preview)
+- `gstreamer1-plugins-bad-free-gtk4`
 
-Run:
+Run in development mode:
 
-```
+```bash
 ./dev_run.sh
 ```
 
-Or install editable and run:
+Or install locally and run:
 
-```
+```bash
 python3 -m pip install -e .
-ffmpeg-gui
+slashmad-ffmpeg-gui
 ```
 
 ## Flatpak
 
-Build and run with Flatpak Builder (adjust `runtime-version` to what you have installed):
+Build and run with Flatpak Builder:
 
-```
-flatpak-builder --force-clean --install-deps-from=flathub --user build flatpak/com.slashmad.TimelapseFFmpegGUI.yml
-flatpak-builder --run build flatpak/com.slashmad.TimelapseFFmpegGUI.yml ffmpeg-gui
+```bash
+flatpak-builder --force-clean --install-deps-from=flathub --user build flatpak/com.slashmad.SlashmadFFmpegGUI.yml
+flatpak-builder --run build flatpak/com.slashmad.SlashmadFFmpegGUI.yml slashmad-ffmpeg-gui
 ```
 
 Notes:
-- The app calls `ffmpeg` to detect available hardware acceleration. In Flatpak it tries to run host `ffmpeg` via `flatpak-spawn --host`.
-- Capture device/source discovery (`v4l2-ctl`, `pactl`, `arecord`) is executed on host via `flatpak-spawn --host` when running inside Flatpak.
-- If you prefer bundling FFmpeg, update the manifest to include a module for it.
-- The included Flatpak manifest grants device/media access needed for capture workflows:
-  - `--share=network` (required for internal UDP live-monitor stream during capture when FFmpeg runs on host)
-  - `--device=all` (USB/V4L2 access)
-  - `--filesystem=/run/udev:ro` (device discovery)
-  - `--socket=pulseaudio` (audio source/sink access)
-  - `--filesystem=/mnt` (common mounted/NFS storage path)
 
-### Theme In Flatpak
+- Inside Flatpak, hardware probing uses host commands via `flatpak-spawn --host`.
+- Capture discovery for `v4l2-ctl`, `pactl`, and `arecord` is executed on host.
+- The included Flatpak manifest grants the permissions needed for capture workflows:
+  - `--share=network`
+  - `--share=ipc`
+  - `--device=all`
+  - `--socket=pulseaudio`
+  - `--filesystem=/run/udev:ro`
+  - `--filesystem=/mnt`
+  - `--filesystem=/media`
+  - `--filesystem=/run/media`
+  - `--filesystem=xdg-download`
+  - `--filesystem=xdg-videos`
 
-Flatpak apps use the GNOME runtime theme (Adwaita) by default. To match your desktop theme, install
-GTK theme extensions in Flatpak. Example for Breeze:
+## Flatpak Theme Override
 
-```
-flatpak install --user flathub org.gtk.Gtk3theme.Breeze
-flatpak install --user flathub org.gtk.Gtk4theme.Breeze
-```
+Force Adwaita dark if your desktop theme is unavailable in the runtime:
 
-If no GTK4 theme is available, the app will fall back to Adwaita but still respect your system
-dark/light preference via the portal.
-
-### Flatpak Theme Override (Optional)
-
-If your desktop theme is not available in Flatpak (e.g., no GTK4 Breeze), you can force Adwaita dark:
-
-```
-flatpak override --user --env=GTK_THEME=Adwaita:dark com.slashmad.TimelapseFFmpegGUI
+```bash
+flatpak override --user --env=GTK_THEME=Adwaita:dark com.slashmad.SlashmadFFmpegGUI
 ```
 
-To remove the override:
+Reset the override:
 
-```
-flatpak override --user --reset com.slashmad.TimelapseFFmpegGUI
+```bash
+flatpak override --user --reset com.slashmad.SlashmadFFmpegGUI
 ```
