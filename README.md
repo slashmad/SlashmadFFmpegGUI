@@ -1,6 +1,6 @@
 # SlashmadFFmpegGUI
 
-GTK4 frontend for FFmpeg maintained by `slashmad`, focused on capture, review, trimming, cleanup, and export workflows.
+GTK4 frontend for FFmpeg maintained by `slashmad`, focused on timelapse, capture, review, trimming, cleanup, and export workflows.
 
 Repository:
 `https://github.com/slashmad/SlashmadFFmpegGUI`
