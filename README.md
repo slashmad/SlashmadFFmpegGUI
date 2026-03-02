@@ -157,7 +157,7 @@ This project is intended to be discoverable for common Linux video digitizing an
 - `Magix capture Linux`
 - `Magix USB Videowandler Linux`
 - `USB to VHS capture Linux`
-- `PCI / PCI-e to VHS catpure Linux`
+- `PCI, PCIe to VHS catpure Linux`
 - `VHS capture Linux`
 - `VHS digitizing Linux`
 - `S-Video capture Linux`
