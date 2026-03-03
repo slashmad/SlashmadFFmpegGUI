@@ -346,10 +346,22 @@ class EditPage(Gtk.Box):
                 "trim_end_label",
                 "trim_set_start_button",
                 "trim_set_end_button",
+                "trim_start_prev_100_frames_button",
+                "trim_start_prev_10_frames_button",
+                "trim_start_prev_5_frames_button",
                 "trim_start_prev_frame_button",
                 "trim_start_next_frame_button",
+                "trim_start_next_5_frames_button",
+                "trim_start_next_10_frames_button",
+                "trim_start_next_100_frames_button",
+                "trim_end_prev_100_frames_button",
+                "trim_end_prev_10_frames_button",
+                "trim_end_prev_5_frames_button",
                 "trim_end_prev_frame_button",
                 "trim_end_next_frame_button",
+                "trim_end_next_5_frames_button",
+                "trim_end_next_10_frames_button",
+                "trim_end_next_100_frames_button",
                 "preview_picture",
                 "preview_start_button",
                 "preview_pause_button",
@@ -412,10 +424,29 @@ class EditPage(Gtk.Box):
 
         self.trim_set_start_button.connect("clicked", self.on_trim_set_start_clicked)
         self.trim_set_end_button.connect("clicked", self.on_trim_set_end_clicked)
-        self.trim_start_prev_frame_button.connect("clicked", self.on_trim_start_prev_frame_clicked)
-        self.trim_start_next_frame_button.connect("clicked", self.on_trim_start_next_frame_clicked)
-        self.trim_end_prev_frame_button.connect("clicked", self.on_trim_end_prev_frame_clicked)
-        self.trim_end_next_frame_button.connect("clicked", self.on_trim_end_next_frame_clicked)
+        self._trim_nudge_buttons: list[Gtk.Button] = []
+        for attr, handle, frames in (
+            ("trim_start_prev_100_frames_button", "start", -100),
+            ("trim_start_prev_10_frames_button", "start", -10),
+            ("trim_start_prev_5_frames_button", "start", -5),
+            ("trim_start_prev_frame_button", "start", -1),
+            ("trim_start_next_frame_button", "start", 1),
+            ("trim_start_next_5_frames_button", "start", 5),
+            ("trim_start_next_10_frames_button", "start", 10),
+            ("trim_start_next_100_frames_button", "start", 100),
+            ("trim_end_prev_100_frames_button", "end", -100),
+            ("trim_end_prev_10_frames_button", "end", -10),
+            ("trim_end_prev_5_frames_button", "end", -5),
+            ("trim_end_prev_frame_button", "end", -1),
+            ("trim_end_next_frame_button", "end", 1),
+            ("trim_end_next_5_frames_button", "end", 5),
+            ("trim_end_next_10_frames_button", "end", 10),
+            ("trim_end_next_100_frames_button", "end", 100),
+        ):
+            button = getattr(self, attr)
+            button.connect("clicked", self.on_trim_nudge_clicked, handle, frames)
+            compact_widget(button, 52)
+            self._trim_nudge_buttons.append(button)
 
         self.preview_start_button.connect("clicked", self.on_preview_start_clicked)
         self.preview_pause_button.connect("clicked", self.on_preview_pause_clicked)
@@ -544,10 +575,8 @@ class EditPage(Gtk.Box):
         self.trim_range_bar.set_sensitive(enabled)
         self.trim_set_start_button.set_sensitive(enabled)
         self.trim_set_end_button.set_sensitive(enabled)
-        self.trim_start_prev_frame_button.set_sensitive(enabled)
-        self.trim_start_next_frame_button.set_sensitive(enabled)
-        self.trim_end_prev_frame_button.set_sensitive(enabled)
-        self.trim_end_next_frame_button.set_sensitive(enabled)
+        for button in self._trim_nudge_buttons:
+            button.set_sensitive(enabled)
 
     def _sync_source_metadata(self) -> None:
         source_path = self.source_entry.get_text().strip()
@@ -869,11 +898,10 @@ class EditPage(Gtk.Box):
         self.trim_range_bar.set_end_value(current)
         self.on_trim_changed(self.trim_range_bar, "end")
 
-    def _nudge_trim_handle(self, handle: str, direction: int, seconds: float | None = None) -> bool:
+    def _nudge_trim_handle(self, handle: str, frames: int) -> bool:
         if self._source_duration_seconds <= 0.0:
             return False
-        step = seconds if seconds is not None else self._frame_step_seconds()
-        delta = float(direction) * step
+        delta = float(frames) * self._frame_step_seconds()
         if handle == "end":
             self.trim_range_bar.set_end_value(self._trim_end_seconds() + delta)
             self.on_trim_changed(self.trim_range_bar, "end")
@@ -881,6 +909,9 @@ class EditPage(Gtk.Box):
             self.trim_range_bar.set_start_value(self._trim_start_seconds() + delta)
             self.on_trim_changed(self.trim_range_bar, "start")
         return True
+
+    def on_trim_nudge_clicked(self, _button: Gtk.Button, handle: str, frames: int) -> None:
+        self._nudge_trim_handle(handle, frames)
 
     def on_trim_start_prev_frame_clicked(self, _button: Gtk.Button) -> None:
         self._nudge_trim_handle("start", -1)

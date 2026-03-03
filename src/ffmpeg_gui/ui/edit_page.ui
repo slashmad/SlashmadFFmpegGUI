@@ -152,7 +152,36 @@
             <child><object class="GtkLabel" id="trim_summary_label"><property name="label">Load a file to set clip start and end.</property><property name="xalign">0</property><style><class name="dim-label"/></style></object></child>
             <child><object class="GtkBox"><property name="orientation">horizontal</property><property name="spacing">5</property><child><object class="GtkLabel"><property name="label">Start</property></object></child><child><object class="GtkLabel" id="trim_start_label"><property name="label">00:00.000</property><property name="width-chars">12</property><property name="xalign">0.0</property></object></child><child><object class="GtkBox" id="trim_range_placeholder"><property name="hexpand">True</property></object></child><child><object class="GtkLabel"><property name="label">End</property></object></child><child><object class="GtkLabel" id="trim_end_label"><property name="label">00:00.000</property><property name="width-chars">12</property><property name="xalign">0.0</property></object></child></object></child>
             <child><object class="GtkBox"><property name="orientation">horizontal</property><property name="spacing">5</property><child><object class="GtkButton" id="trim_set_start_button"><property name="label">Set start from playhead</property><property name="sensitive">False</property></object></child><child><object class="GtkButton" id="trim_set_end_button"><property name="label">Set end from playhead</property><property name="sensitive">False</property></object></child></object></child>
-            <child><object class="GtkBox"><property name="orientation">horizontal</property><property name="spacing">5</property><child><object class="GtkLabel"><property name="label">Start</property></object></child><child><object class="GtkButton" id="trim_start_prev_frame_button"><property name="label">-1f</property><property name="sensitive">False</property></object></child><child><object class="GtkButton" id="trim_start_next_frame_button"><property name="label">+1f</property><property name="sensitive">False</property></object></child><child><object class="GtkSeparator"><property name="orientation">vertical</property></object></child><child><object class="GtkLabel"><property name="label">End</property></object></child><child><object class="GtkButton" id="trim_end_prev_frame_button"><property name="label">-1f</property><property name="sensitive">False</property></object></child><child><object class="GtkButton" id="trim_end_next_frame_button"><property name="label">+1f</property><property name="sensitive">False</property></object></child></object></child>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">5</property>
+                <child><object class="GtkLabel"><property name="label">Start</property></object></child>
+                <child><object class="GtkButton" id="trim_start_prev_100_frames_button"><property name="label">-100f</property><property name="sensitive">False</property><property name="width-request">52</property></object></child>
+                <child><object class="GtkButton" id="trim_start_prev_10_frames_button"><property name="label">-10f</property><property name="sensitive">False</property><property name="width-request">52</property></object></child>
+                <child><object class="GtkButton" id="trim_start_prev_5_frames_button"><property name="label">-5f</property><property name="sensitive">False</property><property name="width-request">52</property></object></child>
+                <child><object class="GtkButton" id="trim_start_prev_frame_button"><property name="label">-1f</property><property name="sensitive">False</property><property name="width-request">52</property></object></child>
+                <child><object class="GtkButton" id="trim_start_next_frame_button"><property name="label">+1f</property><property name="sensitive">False</property><property name="width-request">52</property></object></child>
+                <child><object class="GtkButton" id="trim_start_next_5_frames_button"><property name="label">+5f</property><property name="sensitive">False</property><property name="width-request">52</property></object></child>
+                <child><object class="GtkButton" id="trim_start_next_10_frames_button"><property name="label">+10f</property><property name="sensitive">False</property><property name="width-request">52</property></object></child>
+                <child><object class="GtkButton" id="trim_start_next_100_frames_button"><property name="label">+100f</property><property name="sensitive">False</property><property name="width-request">52</property></object></child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">5</property>
+                <child><object class="GtkLabel"><property name="label">End</property></object></child>
+                <child><object class="GtkButton" id="trim_end_prev_100_frames_button"><property name="label">-100f</property><property name="sensitive">False</property><property name="width-request">52</property></object></child>
+                <child><object class="GtkButton" id="trim_end_prev_10_frames_button"><property name="label">-10f</property><property name="sensitive">False</property><property name="width-request">52</property></object></child>
+                <child><object class="GtkButton" id="trim_end_prev_5_frames_button"><property name="label">-5f</property><property name="sensitive">False</property><property name="width-request">52</property></object></child>
+                <child><object class="GtkButton" id="trim_end_prev_frame_button"><property name="label">-1f</property><property name="sensitive">False</property><property name="width-request">52</property></object></child>
+                <child><object class="GtkButton" id="trim_end_next_frame_button"><property name="label">+1f</property><property name="sensitive">False</property><property name="width-request">52</property></object></child>
+                <child><object class="GtkButton" id="trim_end_next_5_frames_button"><property name="label">+5f</property><property name="sensitive">False</property><property name="width-request">52</property></object></child>
+                <child><object class="GtkButton" id="trim_end_next_10_frames_button"><property name="label">+10f</property><property name="sensitive">False</property><property name="width-request">52</property></object></child>
+                <child><object class="GtkButton" id="trim_end_next_100_frames_button"><property name="label">+100f</property><property name="sensitive">False</property><property name="width-request">52</property></object></child>
+              </object>
+            </child>
             <child><object class="GtkLabel"><property name="label">Use the player timeline to seek, then set trim start/end from the current playhead.</property><property name="xalign">0</property><property name="wrap">True</property><style><class name="dim-label"/></style></object></child>
           </object>
         </child>
