@@ -242,4 +242,4 @@ This project is intended to be discoverable for common Linux video digitizing an
   <img src="data/screenshots/04hardware.png" alt="Hardware workflow" width="24%">
 </p>
 
-Disclosure: Parts of this project were developed with assistance from the active OpenAI GPT model used during development.
+Disclosure: Parts of this project were developed with assistance of OpenAI GPT-5.3-Codex.
