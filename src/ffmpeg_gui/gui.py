@@ -22,6 +22,8 @@ from ffmpeg_gui.ffmpeg import detect_ffmpeg, detect_renderers, list_encoders, li
 from ffmpeg_gui.i18n import _
 from ffmpeg_gui.runner import FFmpegRunner
 from ffmpeg_gui.ui import bind_objects, compact_widget, load_builder, require_object
+from ffmpeg_gui.vapoursynth_process import VapourSynthProcessPage
+from ffmpeg_gui.vapoursynth_page import VapourSynthPage
 
 
 PRESETS_X264 = [
@@ -91,6 +93,8 @@ class MainWindow(Gtk.ApplicationWindow):
         self.set_child(root)
 
         self.notebook = Gtk.Notebook()
+        self.notebook.set_scrollable(True)
+        self.notebook.popup_enable()
         root.append(self.notebook)
 
         self._apply_css()
@@ -107,6 +111,16 @@ class MainWindow(Gtk.ApplicationWindow):
         self.edit_page_scroller = Gtk.ScrolledWindow()
         self.edit_page_scroller.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
         self.edit_page_scroller.set_child(self.edit_page)
+        self.vapoursynth_process_page = VapourSynthProcessPage()
+        self.vapoursynth_process_page.add_css_class("ffmpeg-page")
+        self.vapoursynth_process_page_scroller = Gtk.ScrolledWindow()
+        self.vapoursynth_process_page_scroller.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+        self.vapoursynth_process_page_scroller.set_child(self.vapoursynth_process_page)
+        self.vapoursynth_page = VapourSynthPage()
+        self.vapoursynth_page.add_css_class("ffmpeg-page")
+        self.vapoursynth_page_scroller = Gtk.ScrolledWindow()
+        self.vapoursynth_page_scroller.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+        self.vapoursynth_page_scroller.set_child(self.vapoursynth_page)
         self.hardware_page = self._build_hardware_page()
         self.hardware_page.add_css_class("ffmpeg-page")
         self.help_page = self._build_help_page()
@@ -114,14 +128,32 @@ class MainWindow(Gtk.ApplicationWindow):
 
         self.notebook.append_page(self.encode_page, Gtk.Label(label=_("Timelapse")))
         self.notebook.append_page(self.capture_page_scroller, Gtk.Label(label=_("Capture")))
-        self.notebook.append_page(self.edit_page_scroller, Gtk.Label(label=_("Edit")))
+        self.notebook.append_page(self.edit_page_scroller, Gtk.Label(label=_("Trim")))
+        self.notebook.append_page(self.vapoursynth_process_page_scroller, Gtk.Label(label=_("VapourSynth")))
+        self.notebook.append_page(self.vapoursynth_page_scroller, Gtk.Label(label=_("VSRepo")))
         self.notebook.append_page(self.hardware_page, Gtk.Label(label=_("Hardware")))
         self.notebook.append_page(self.help_page, Gtk.Label(label=_("Help")))
+        self._debug_print_tabs_if_enabled()
 
         self.connect("close-request", self.on_close_request)
 
         self.refresh()
         self.update_preview()
+
+    def _debug_print_tabs_if_enabled(self) -> None:
+        if os.environ.get("FFMPEG_GUI_DEBUG_TABS", "0") != "1":
+            return
+        try:
+            pages = self.notebook.get_n_pages()
+            print(f"[tabs] pages={pages}", flush=True)
+            for index in range(pages):
+                child = self.notebook.get_nth_page(index)
+                tab = self.notebook.get_tab_label(child)
+                text = tab.get_text() if isinstance(tab, Gtk.Label) else type(tab).__name__
+                visible = tab.get_visible() if tab is not None else False
+                print(f"[tabs] {index}: {text!r} visible={visible}", flush=True)
+        except Exception as exc:
+            print(f"[tabs] debug failed: {exc}", flush=True)
 
     def _build_help_page(self) -> Gtk.Widget:
         builder = load_builder("help_page.ui")
@@ -309,6 +341,16 @@ class MainWindow(Gtk.ApplicationWindow):
             ffmpeg_command=self._ffmpeg_command,
             encoders=self._encoders,
             pixel_formats=self._pixel_formats,
+            hardware_info=self._hardware_info,
+        )
+        self.vapoursynth_process_page.sync_capabilities(
+            ffmpeg_command=self._ffmpeg_command,
+            encoders=self._encoders,
+            pixel_formats=self._pixel_formats,
+        )
+        self.vapoursynth_page.sync_capabilities(
+            ffmpeg_command=self._ffmpeg_command,
+            encoders=self._encoders,
             hardware_info=self._hardware_info,
         )
 
@@ -528,8 +570,8 @@ class MainWindow(Gtk.ApplicationWindow):
             background: #181c22;
             border-bottom: 1px solid #2b3340;
             box-shadow: none;
-            min-height: 24px;
-            padding: 0 6px;
+            min-height: 20px;
+            padding: 0 5px;
         }
 
         headerbar.ffmpeg-headerbar label {
@@ -543,9 +585,9 @@ class MainWindow(Gtk.ApplicationWindow):
             border: 1px solid #364151;
             border-radius: 7px;
             box-shadow: none;
-            min-height: 12px;
-            min-width: 52px;
-            padding: 2px 8px;
+            min-height: 10px;
+            min-width: 48px;
+            padding: 1px 7px;
         }
 
         headerbar.ffmpeg-headerbar button.toolbar-button:hover {
@@ -567,8 +609,8 @@ class MainWindow(Gtk.ApplicationWindow):
             background: transparent;
             border: none;
             border-radius: 6px;
-            min-width: 14px;
-            min-height: 14px;
+            min-width: 12px;
+            min-height: 12px;
             margin: 0;
             padding: 0;
             box-shadow: none;
@@ -597,7 +639,7 @@ class MainWindow(Gtk.ApplicationWindow):
 
         window.ffmpeg-app-window notebook > header > tabs > tab {
             margin: 0 2px;
-            padding: 4px 10px;
+            padding: 3px 9px;
             border-radius: 10px 10px 0 0;
             color: rgba(237, 242, 248, 0.76);
         }
@@ -617,7 +659,7 @@ class MainWindow(Gtk.ApplicationWindow):
             background: #141a22;
             border: none;
             border-radius: 10px;
-            padding: 5px;
+            padding: 4px;
             box-shadow: none;
         }
 
@@ -625,7 +667,7 @@ class MainWindow(Gtk.ApplicationWindow):
             background: #141a22;
             border: none;
             border-radius: 10px;
-            padding: 5px 8px;
+            padding: 4px 7px;
             box-shadow: none;
         }
 
@@ -669,8 +711,8 @@ class MainWindow(Gtk.ApplicationWindow):
 
         window.ffmpeg-app-window entry,
         window.ffmpeg-app-window spinbutton entry {
-            min-height: 16px;
-            padding: 5px 8px;
+            min-height: 14px;
+            padding: 4px 7px;
             caret-color: #f2f6fb;
         }
 
@@ -711,9 +753,9 @@ class MainWindow(Gtk.ApplicationWindow):
             border: 1px solid #394454;
             border-radius: 8px;
             box-shadow: none;
-            min-width: 64px;
-            min-height: 16px;
-            padding: 5px 10px;
+            min-width: 58px;
+            min-height: 14px;
+            padding: 4px 8px;
         }
 
         window.ffmpeg-app-window button:hover,
@@ -740,9 +782,9 @@ class MainWindow(Gtk.ApplicationWindow):
         }
 
         window.ffmpeg-app-window spinbutton button {
-            padding: 5px 8px;
-            min-width: 22px;
-            min-height: 16px;
+            padding: 4px 6px;
+            min-width: 20px;
+            min-height: 14px;
         }
 
         window.ffmpeg-app-window checkbutton > check {
@@ -1191,4 +1233,5 @@ class MainWindow(Gtk.ApplicationWindow):
         self.runner.stop()
         self.capture_page.shutdown()
         self.edit_page.shutdown()
+        self.vapoursynth_process_page.shutdown()
         return False

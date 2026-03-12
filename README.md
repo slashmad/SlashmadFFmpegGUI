@@ -20,13 +20,42 @@ License:
 
 - FFmpeg encode (`Timelapse`) workflow with hardware-acceleration detection.
 - Dedicated `Capture` tab for VHS, USB, PCI, and PCIe capture devices.
-- Dedicated `Edit` tab with in-app playback, trim controls, frame stepping, and export.
+- Dedicated `Trim` tab with in-app playback, trim controls, frame stepping, and export.
+- Dedicated `VapourSynth` tab for script-based post-processing and export.
+- Dedicated `VSRepo` tab for host dependency checks and install guidance.
 - Live video and live audio monitoring with independent mute and volume control.
 - Capture profiles for archive, delivery, and proxy outputs.
 - Analog source input selection for devices exposing `Composite` / `S-Video`.
 - Explicit FFmpeg command preview for capture and export jobs.
 - Flatpak support with host-device discovery via `flatpak-spawn --host`.
 - Compact custom dark GTK styling tuned for capture, review, and long-session editing.
+
+## VapourSynth & VSRepo
+
+- Pipeline presets for VHS workflows:
+  - `VHS QTGMC Balanced (Auto/BFF/TFF)`
+  - `VHS QTGMC Stable (less shimmer)`
+  - `VHS QTGMC Clean Test (minimal)`
+  - `VHS BWDIF Fast (quick preview/export)`
+  - `VHS Backup Export`
+- Full QTGMC deinterlace speed list in UI:
+  - `Placebo`, `Very Slow`, `Slower`, `Slow`, `Medium`, `Fast`, `Faster`, `Very Fast`, `Super Fast`, `Ultra Fast`, `Draft`
+- Advanced QTGMC controls exposed in UI:
+  - `SourceMatch`, `MatchPreset`, `MatchPreset2`, `MatchTR2`
+  - `TR0/TR1/TR2`, `Lossless`, `Sharpness`
+  - `EZDenoise` / `EZKeepGrain`, `InputType`, `FPSDivisor`, `Tuning`, extra raw args
+- Source loading and fallback logic in generated scripts:
+  - `ffms2` -> `lsmas` -> `bestsource` (with plugin load attempts from common host paths)
+- Auto field-order support:
+  - `Auto/TFF/BFF` in UI with automatic fallback and idet-assisted detection notes.
+- Export controls:
+  - Rate control (`Bitrate` / `CRF`) and explicit speed preset for `libx264`/`libx265`
+  - Encoder preset list: `ultrafast` ... `placebo`
+  - Auto FPS from VS output (recommended for bob/QTGMC double-rate exports)
+- VSRepo tab shows:
+  - Installed/missing plugin chain for selected preset
+  - Practical install command suggestions for host setup
+  - FFmpeg export support overview (container/codec availability)
 
 ## Edit Workflow Notes
 

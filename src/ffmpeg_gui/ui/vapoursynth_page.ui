@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <object class="GtkBox" id="vapoursynth_page_root">
+    <property name="orientation">vertical</property>
+    <property name="spacing">5</property>
+    <child>
+      <object class="GtkFrame">
+        <property name="label">VSRepo Status</property>
+        <property name="valign">start</property>
+        <child>
+          <object class="GtkBox">
+            <property name="orientation">vertical</property>
+            <property name="spacing">5</property>
+            <property name="margin-top">5</property>
+            <property name="margin-bottom">5</property>
+            <property name="margin-start">5</property>
+            <property name="margin-end">5</property>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">5</property>
+                <child>
+                  <object class="GtkLabel" id="vs_status_label">
+                    <property name="xalign">0</property>
+                    <property name="hexpand">True</property>
+                    <property name="wrap">True</property>
+                    <style><class name="dim-label"/></style>
+                  </object>
+                </child>
+                <child><object class="GtkButton" id="vs_refresh_button"><property name="label">Refresh</property></object></child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel" id="vs_paths_label">
+                <property name="xalign">0</property>
+                <property name="wrap">True</property>
+                <style><class name="dim-label"/></style>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel" id="vs_plugins_label">
+                <property name="xalign">0</property>
+                <property name="wrap">True</property>
+                <style><class name="dim-label"/></style>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="GtkBox">
+        <property name="orientation">horizontal</property>
+        <property name="spacing">5</property>
+        <property name="hexpand">True</property>
+        <child>
+          <object class="GtkFrame">
+            <property name="label">Preset &amp; Filters</property>
+            <property name="hexpand">True</property>
+            <property name="valign">start</property>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <property name="spacing">5</property>
+                <property name="margin-top">5</property>
+                <property name="margin-bottom">5</property>
+                <property name="margin-start">5</property>
+                <property name="margin-end">5</property>
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">5</property>
+                    <child><object class="GtkLabel"><property name="label">Preset</property><property name="xalign">0</property><property name="width-request">95</property></object></child>
+                    <child><object class="GtkComboBoxText" id="preset_combo"><property name="width-request">260</property></object></child>
+                  </object>
+                </child>
+                <child><object class="GtkLabel" id="preset_description_label"><property name="xalign">0</property><property name="wrap">True</property><style><class name="dim-label"/></style></object></child>
+                <child><object class="GtkLabel" id="preset_summary_label"><property name="xalign">0</property><property name="wrap">True</property><style><class name="dim-label"/></style></object></child>
+                <child>
+                  <object class="GtkScrolledWindow">
+                    <property name="vexpand">True</property>
+                    <property name="min-content-height">220</property>
+                    <child>
+                      <object class="GtkTextView" id="filters_view">
+                        <property name="editable">False</property>
+                        <property name="cursor-visible">False</property>
+                        <property name="monospace">True</property>
+                        <property name="wrap-mode">word-char</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkFrame">
+            <property name="label">Install &amp; Export Support</property>
+            <property name="hexpand">True</property>
+            <property name="valign">start</property>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <property name="spacing">5</property>
+                <property name="margin-top">5</property>
+                <property name="margin-bottom">5</property>
+                <property name="margin-start">5</property>
+                <property name="margin-end">5</property>
+                <child><object class="GtkLabel"><property name="label">Install command</property><property name="xalign">0</property></object></child>
+                <child>
+                  <object class="GtkScrolledWindow">
+                    <property name="min-content-height">120</property>
+                    <child>
+                      <object class="GtkTextView" id="install_command_view">
+                        <property name="editable">False</property>
+                        <property name="cursor-visible">False</property>
+                        <property name="monospace">True</property>
+                        <property name="wrap-mode">word-char</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child><object class="GtkLabel" id="install_notes_label"><property name="xalign">0</property><property name="wrap">True</property><style><class name="dim-label"/></style></object></child>
+                <child><object class="GtkLabel"><property name="label">FFmpeg export support</property><property name="xalign">0</property></object></child>
+                <child>
+                  <object class="GtkScrolledWindow">
+                    <property name="vexpand">True</property>
+                    <property name="min-content-height">160</property>
+                    <child>
+                      <object class="GtkTextView" id="codec_support_view">
+                        <property name="editable">False</property>
+                        <property name="cursor-visible">False</property>
+                        <property name="monospace">True</property>
+                        <property name="wrap-mode">word-char</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

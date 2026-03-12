@@ -1,0 +1,377 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <object class="GtkBox" id="vapoursynth_process_page_root">
+    <property name="orientation">vertical</property>
+    <property name="spacing">5</property>
+    <child>
+      <object class="GtkFrame">
+        <property name="label">VapourSynth Status</property>
+        <property name="valign">start</property>
+        <child>
+          <object class="GtkBox">
+            <property name="orientation">vertical</property>
+            <property name="spacing">5</property>
+            <property name="margin-top">5</property>
+            <property name="margin-bottom">5</property>
+            <property name="margin-start">5</property>
+            <property name="margin-end">5</property>
+            <child>
+              <object class="GtkLabel" id="vs_status_label">
+                <property name="xalign">0</property>
+                <property name="wrap">True</property>
+                <style><class name="dim-label"/></style>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="GtkBox">
+        <property name="orientation">horizontal</property>
+        <property name="spacing">5</property>
+        <property name="hexpand">True</property>
+        <child>
+          <object class="GtkFrame">
+            <property name="label">Source</property>
+            <property name="hexpand">True</property>
+            <property name="valign">start</property>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <property name="spacing">5</property>
+                <property name="margin-top">5</property>
+                <property name="margin-bottom">5</property>
+                <property name="margin-start">5</property>
+                <property name="margin-end">5</property>
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">5</property>
+                    <child><object class="GtkEntry" id="source_entry"><property name="placeholder-text">Input media file</property><property name="hexpand">True</property></object></child>
+                    <child><object class="GtkButton" id="source_pick_button"><property name="label">Choose</property></object></child>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="source_meta_label">
+                    <property name="label">No source loaded.</property>
+                    <property name="xalign">0</property>
+                    <property name="wrap">True</property>
+                    <style><class name="dim-label"/></style>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkBox" id="source_probe_box">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">5</property>
+                    <property name="visible">False</property>
+                    <child><object class="GtkSpinner" id="source_probe_spinner"/></child>
+                    <child>
+                      <object class="GtkLabel" id="source_probe_label">
+                        <property name="xalign">0</property>
+                        <property name="label">Importing source metadata...</property>
+                        <style><class name="dim-label"/></style>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkFrame">
+            <property name="label">Export Output</property>
+            <property name="hexpand">True</property>
+            <property name="valign">start</property>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <property name="spacing">5</property>
+                <property name="margin-top">5</property>
+                <property name="margin-bottom">5</property>
+                <property name="margin-start">5</property>
+                <property name="margin-end">5</property>
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">5</property>
+                    <child><object class="GtkEntry" id="output_entry"><property name="placeholder-text">Output file</property><property name="hexpand">True</property></object></child>
+                    <child><object class="GtkButton" id="out_pick_button"><property name="label">Choose</property></object></child>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">5</property>
+                    <child><object class="GtkLabel"><property name="label">Mode</property></object></child>
+                    <child><object class="GtkComboBoxText" id="output_mode_combo"><property name="width-request">160</property></object></child>
+                    <child><object class="GtkLabel"><property name="label">Container</property></object></child>
+                    <child><object class="GtkComboBoxText" id="container_combo"><property name="width-request">95</property></object></child>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">5</property>
+                    <child><object class="GtkLabel"><property name="label">Video codec</property></object></child>
+                    <child><object class="GtkComboBoxText" id="video_codec_combo"><property name="width-request">160</property></object></child>
+                    <child><object class="GtkLabel"><property name="label">Preset</property></object></child>
+                    <child><object class="GtkComboBoxText" id="video_preset_combo"><property name="width-request">120</property></object></child>
+                    <child><object class="GtkLabel"><property name="label">Rate control</property></object></child>
+                    <child><object class="GtkComboBoxText" id="video_rate_mode_combo"><property name="width-request">105</property></object></child>
+                    <child><object class="GtkEntry" id="video_rate_value_entry"><property name="placeholder-text">6M / 18</property><property name="text">6M</property><property name="width-request">80</property></object></child>
+                    <child><object class="GtkLabel"><property name="label">Pixel format</property></object></child>
+                    <child><object class="GtkComboBoxText" id="pix_fmt_combo"><property name="width-request">130</property></object></child>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">5</property>
+                    <child><object class="GtkLabel"><property name="label">Audio codec</property></object></child>
+                    <child><object class="GtkComboBoxText" id="audio_codec_combo"><property name="width-request">160</property></object></child>
+                    <child><object class="GtkEntry" id="audio_bitrate_entry"><property name="placeholder-text">192k</property><property name="text">192k</property><property name="width-request">80</property></object></child>
+                    <child><object class="GtkLabel"><property name="label">Rate</property></object></child>
+                    <child><object class="GtkSpinButton" id="sample_rate_spin"><property name="width-request">90</property><property name="adjustment"><object class="GtkAdjustment"><property name="lower">8000</property><property name="upper">192000</property><property name="step-increment">1000</property><property name="page-increment">1000</property><property name="value">48000</property></object></property></object></child>
+                    <child><object class="GtkLabel"><property name="label">Channels</property></object></child>
+                    <child><object class="GtkComboBoxText" id="channels_combo"><property name="width-request">75</property></object></child>
+                </object>
+                </child>
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">5</property>
+                    <child><object class="GtkCheckButton" id="match_fps_check"><property name="label">Auto FPS (VS output)</property><property name="active">True</property></object></child>
+                    <child><object class="GtkSpinButton" id="output_fps_spin"><property name="digits">3</property><property name="sensitive">False</property><property name="width-request">95</property><property name="adjustment"><object class="GtkAdjustment"><property name="lower">1</property><property name="upper">120</property><property name="step-increment">0.01</property><property name="page-increment">1.0</property><property name="value">25.0</property></object></property></object></child>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="GtkFrame">
+        <property name="label">Presets &amp; Script</property>
+        <child>
+          <object class="GtkBox">
+            <property name="orientation">vertical</property>
+            <property name="spacing">5</property>
+            <property name="margin-top">5</property>
+            <property name="margin-bottom">5</property>
+            <property name="margin-start">5</property>
+            <property name="margin-end">5</property>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">5</property>
+                <child><object class="GtkLabel"><property name="label">Pipeline preset</property><property name="xalign">0</property><property name="width-request">120</property></object></child>
+                <child><object class="GtkComboBoxText" id="pipeline_preset_combo"><property name="width-request">300</property></object></child>
+                <child><object class="GtkButton" id="pipeline_apply_button"><property name="label">Apply</property></object></child>
+              </object>
+            </child>
+            <child><object class="GtkLabel" id="pipeline_preset_desc_label"><property name="xalign">0</property><property name="wrap">True</property><style><class name="dim-label"/></style></object></child>
+            <child><object class="GtkLabel"><property name="label">Select processing profile or tune manually below.</property><property name="xalign">0</property><style><class name="dim-label"/></style></object></child>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">5</property>
+                <child><object class="GtkLabel"><property name="label">Deinterlace</property><property name="width-request">120</property></object></child>
+                <child><object class="GtkComboBoxText" id="deinterlace_combo"><property name="width-request">220</property></object></child>
+                <child><object class="GtkLabel"><property name="label">Field order</property></object></child>
+                <child><object class="GtkComboBoxText" id="field_order_combo"><property name="width-request">120</property></object></child>
+                <child><object class="GtkLabel"><property name="label">VHS cleanup</property></object></child>
+                <child><object class="GtkComboBoxText" id="cleanup_combo"><property name="width-request">150</property></object></child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkFrame" id="qtgmc_advanced_frame">
+                <property name="label">QTGMC Advanced</property>
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">vertical</property>
+                    <property name="spacing">5</property>
+                    <property name="margin-top">5</property>
+                    <property name="margin-bottom">5</property>
+                    <property name="margin-start">5</property>
+                    <property name="margin-end">5</property>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">5</property>
+                        <child><object class="GtkLabel"><property name="label">SourceMatch</property><property name="xalign">0</property></object></child>
+                        <child><object class="GtkComboBoxText" id="source_match_combo"><property name="width-request">120</property></object></child>
+                        <child><object class="GtkLabel"><property name="label">MatchPreset</property><property name="xalign">0</property></object></child>
+                        <child><object class="GtkComboBoxText" id="match_preset_combo"><property name="width-request">150</property></object></child>
+                        <child><object class="GtkLabel"><property name="label">MatchPreset2</property><property name="xalign">0</property></object></child>
+                        <child><object class="GtkComboBoxText" id="match_preset2_combo"><property name="width-request">150</property></object></child>
+                        <child><object class="GtkLabel"><property name="label">MatchTR2</property><property name="xalign">0</property></object></child>
+                        <child><object class="GtkComboBoxText" id="match_tr2_combo"><property name="width-request">95</property></object></child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">5</property>
+                        <child><object class="GtkLabel"><property name="label">Lossless</property><property name="xalign">0</property></object></child>
+                        <child><object class="GtkComboBoxText" id="lossless_combo"><property name="width-request">120</property></object></child>
+                        <child><object class="GtkLabel"><property name="label">TR0</property><property name="xalign">0</property></object></child>
+                        <child><object class="GtkComboBoxText" id="tr0_combo"><property name="width-request">95</property></object></child>
+                        <child><object class="GtkLabel"><property name="label">TR1</property><property name="xalign">0</property></object></child>
+                        <child><object class="GtkComboBoxText" id="tr1_combo"><property name="width-request">95</property></object></child>
+                        <child><object class="GtkLabel"><property name="label">TR2</property><property name="xalign">0</property></object></child>
+                        <child><object class="GtkComboBoxText" id="tr2_combo"><property name="width-request">95</property></object></child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">5</property>
+                        <child><object class="GtkLabel"><property name="label">Sharpness</property><property name="xalign">0</property></object></child>
+                        <child><object class="GtkEntry" id="sharpness_entry"><property name="placeholder-text">auto</property><property name="width-request">120</property></object></child>
+                        <child><object class="GtkLabel"><property name="label">EZDenoise</property><property name="xalign">0</property></object></child>
+                        <child><object class="GtkEntry" id="ez_denoise_entry"><property name="placeholder-text">auto/off</property><property name="width-request">120</property></object></child>
+                        <child><object class="GtkLabel"><property name="label">EZKeepGrain</property><property name="xalign">0</property></object></child>
+                        <child><object class="GtkEntry" id="ez_keep_grain_entry"><property name="placeholder-text">auto/off</property><property name="width-request">120</property></object></child>
+                        <child><object class="GtkLabel"><property name="label">InputType</property><property name="xalign">0</property></object></child>
+                        <child><object class="GtkComboBoxText" id="input_type_combo"><property name="width-request">95</property></object></child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">5</property>
+                        <child><object class="GtkLabel"><property name="label">FPSDivisor</property><property name="xalign">0</property></object></child>
+                        <child>
+                          <object class="GtkSpinButton" id="fps_divisor_spin">
+                            <property name="numeric">True</property>
+                            <property name="digits">0</property>
+                            <property name="width-request">120</property>
+                            <property name="adjustment">
+                              <object class="GtkAdjustment">
+                                <property name="lower">1</property>
+                                <property name="upper">8</property>
+                                <property name="step-increment">1</property>
+                                <property name="page-increment">1</property>
+                                <property name="value">1</property>
+                              </object>
+                            </property>
+                          </object>
+                        </child>
+                        <child><object class="GtkLabel"><property name="label">Tuning</property><property name="xalign">0</property></object></child>
+                        <child><object class="GtkComboBoxText" id="qtgmc_tuning_combo"><property name="width-request">150</property></object></child>
+                        <child>
+                          <object class="GtkCheckButton" id="qtgmc_show_settings_check">
+                            <property name="label">ShowSettings in log</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">5</property>
+                        <child><object class="GtkLabel"><property name="label">Extra QTGMC args</property><property name="xalign">0</property></object></child>
+                        <child>
+                          <object class="GtkEntry" id="qtgmc_extra_args_entry">
+                            <property name="hexpand">True</property>
+                            <property name="placeholder-text">e.g. NoiseProcess=1, Denoiser=&quot;dfttest&quot;, ChromaNoise=True</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child><object class="GtkCheckButton" id="use_custom_script_check"><property name="label">Use custom script (replaces preset generator)</property></object></child>
+            <child>
+              <object class="GtkScrolledWindow">
+                <property name="vexpand">True</property>
+                <property name="min-content-height">120</property>
+                <child>
+                  <object class="GtkTextView" id="custom_script_view">
+                    <property name="monospace">True</property>
+                    <property name="wrap-mode">word-char</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel" id="script_note_label">
+                <property name="xalign">0</property>
+                <property name="wrap">True</property>
+                <style><class name="dim-label"/></style>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="GtkFrame">
+        <property name="label">Export</property>
+        <child>
+          <object class="GtkBox">
+            <property name="orientation">vertical</property>
+            <property name="spacing">5</property>
+            <property name="margin-top">5</property>
+            <property name="margin-bottom">5</property>
+            <property name="margin-start">5</property>
+            <property name="margin-end">5</property>
+            <child>
+              <object class="GtkLabel" id="status_label">
+                <property name="xalign">0</property>
+                <property name="wrap">True</property>
+                <property name="visible">False</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkScrolledWindow">
+                <property name="min-content-height">78</property>
+                <child>
+                  <object class="GtkTextView" id="command_view">
+                    <property name="editable">False</property>
+                    <property name="cursor-visible">False</property>
+                    <property name="monospace">True</property>
+                    <property name="wrap-mode">word-char</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">5</property>
+                <child><object class="GtkButton" id="start_button"><property name="label">Start export</property></object></child>
+                <child><object class="GtkButton" id="stop_button"><property name="label">Stop export</property><property name="sensitive">False</property></object></child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkExpander" id="log_expander">
+                <property name="label">VapourSynth log</property>
+                <property name="expanded">True</property>
+                <child>
+                  <object class="GtkScrolledWindow">
+                    <property name="vexpand">True</property>
+                    <property name="min-content-height">105</property>
+                    <child>
+                      <object class="GtkTextView" id="log_view">
+                        <property name="editable">False</property>
+                        <property name="cursor-visible">False</property>
+                        <property name="monospace">True</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

@@ -5,7 +5,7 @@ import os
 import gi
 
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gtk
+from gi.repository import Gio, Gtk
 
 from ffmpeg_gui.gui import MainWindow
 from ffmpeg_gui.i18n import setup_gettext
@@ -22,7 +22,9 @@ def main() -> None:
     os.environ.setdefault("GSK_RENDERER", "ngl")
 
     setup_gettext()
-    app = Gtk.Application(application_id="io.github.slashmad.SlashmadFFmpegGUI")
+    app_id = os.environ.get("FFMPEG_GUI_APP_ID", "").strip() or "io.github.slashmad.SlashmadFFmpegGUI"
+    # Allow parallel app instances (useful when running dev build beside installed Flatpak).
+    app = Gtk.Application(application_id=app_id, flags=Gio.ApplicationFlags.NON_UNIQUE)
     app.connect("activate", _on_activate)
     app.run()
 
