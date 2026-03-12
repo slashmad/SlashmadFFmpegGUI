@@ -134,12 +134,47 @@ Typical dependencies:
 - `gstreamer1-plugins-good`
 - `gstreamer1-plugins-bad-free`
 - `gstreamer1-plugins-bad-free-gtk4`
+- `vapoursynth` (provides `vspipe`)
 
 Optional but useful:
 
 - `pipewire-utils` for extra PipeWire diagnostics outside the app
 - `flatpak`
 - `flatpak-builder`
+
+VapourSynth + VSRepo host setup:
+
+```bash
+# clone vsrepo (pick any folder you prefer)
+git clone https://github.com/vapoursynth/vsrepo.git
+cd vsrepo
+
+# update package metadata
+python3 vsrepo.py update
+
+# install common VHS chain used by this app
+python3 vsrepo.py install \
+  havsfunc \
+  com.vapoursynth.ffms2 \
+  com.holywu.bwdif \
+  com.vapoursynth.bm3d \
+  com.Khanattila.KNLMeansCL \
+  com.holywu.deblock
+```
+
+Verify host tools/plugins:
+
+```bash
+vspipe --version
+python3 -c "import vapoursynth as vs; print(vs.__version__)"
+python3 vsrepo.py paths
+```
+
+If `vsrepo.py install` ends with a `vapoursynth-stubs` permission error:
+
+- Plugin binaries are often installed anyway.
+- Open the app `VSRepo` tab and press `Refresh` to confirm what is `OK`/`MISSING`.
+- If needed, fix ownership in user-local paths and rerun install without `sudo`.
 
 Run in development mode:
 
@@ -206,3 +241,5 @@ This project is intended to be discoverable for common Linux video digitizing an
   <img src="data/screenshots/03edit.png" alt="Edit workflow" width="24%">
   <img src="data/screenshots/04hardware.png" alt="Hardware workflow" width="24%">
 </p>
+
+Disclosure: Parts of this project were developed with assistance from the active OpenAI GPT model used during development.
