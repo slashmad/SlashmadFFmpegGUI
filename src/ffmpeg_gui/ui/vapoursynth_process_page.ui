@@ -348,6 +348,9 @@
                 <property name="spacing">5</property>
                 <child><object class="GtkButton" id="start_button"><property name="label">Start export</property></object></child>
                 <child><object class="GtkButton" id="stop_button"><property name="label">Stop export</property><property name="sensitive">False</property></object></child>
+                <child><object class="GtkButton" id="add_queue_button"><property name="label">Add to queue</property></object></child>
+                <child><object class="GtkButton" id="run_queue_button"><property name="label">Run queue</property></object></child>
+                <child><object class="GtkButton" id="show_queue_button"><property name="label">Show queue</property></object></child>
               </object>
             </child>
             <child>

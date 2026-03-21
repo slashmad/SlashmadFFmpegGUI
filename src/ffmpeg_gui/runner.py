@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import signal
 import subprocess
 import threading
 from typing import Callable
@@ -30,6 +32,9 @@ class FFmpegRunner:
             stderr=subprocess.STDOUT,
             text=True,
             bufsize=1,
+            # Keep command + children in one process group so stop() can
+            # terminate full pipelines like: vspipe | ffmpeg.
+            start_new_session=True,
         )
         self._process = process
 
@@ -52,9 +57,27 @@ class FFmpegRunner:
         process = self._process
         if process is None:
             return
-        process.terminate()
+
+        # Try graceful stop for the full process group first.
         try:
-            process.wait(timeout=2)
+            os.killpg(process.pid, signal.SIGINT)
+        except ProcessLookupError:
+            return
+        except OSError:
+            process.terminate()
+
+        try:
+            process.wait(timeout=4)
         except subprocess.TimeoutExpired:
-            process.kill()
-            process.wait(timeout=2)
+            try:
+                os.killpg(process.pid, signal.SIGTERM)
+            except (ProcessLookupError, OSError):
+                process.terminate()
+            try:
+                process.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                try:
+                    os.killpg(process.pid, signal.SIGKILL)
+                except (ProcessLookupError, OSError):
+                    process.kill()
+                process.wait(timeout=2)

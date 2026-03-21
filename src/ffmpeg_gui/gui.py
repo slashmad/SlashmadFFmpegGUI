@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 
 import gi
 
@@ -13,6 +14,7 @@ from ffmpeg_gui.encode import (
     build_command_preview,
     build_ffmpeg_command,
     collect_inputs,
+    prepare_inputs_for_timelapse,
     quality_flag_for_codec,
     write_concat_file,
 )
@@ -66,6 +68,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.output_auto = True
         self._setting_output = False
         self._concat_list_path: str | None = None
+        self._prepared_input_tempdir: str | None = None
         self.last_folder_path: str | None = None
 
         self._encoders = []
@@ -1164,7 +1167,19 @@ class MainWindow(Gtk.ApplicationWindow):
         fps = self.fps_spin.get_value()
         extra_args = self.extra_entry.get_text().strip() or None
 
-        list_file = write_concat_file(collection.paths, fps)
+        self._cleanup_concat_file()
+        self._cleanup_prepared_inputs()
+        try:
+            prepared = prepare_inputs_for_timelapse(collection.paths)
+        except Exception as exc:
+            self.encode_status.set_text(str(exc))
+            return
+
+        if prepared.warnings:
+            warnings.extend(prepared.warnings)
+        self._prepared_input_tempdir = prepared.temp_dir
+
+        list_file = write_concat_file(prepared.paths, fps)
         self._concat_list_path = list_file
 
         cmd = build_ffmpeg_command(
@@ -1187,11 +1202,15 @@ class MainWindow(Gtk.ApplicationWindow):
             self.encode_status.set_text("\n".join(warnings))
 
         self._clear_log()
+        if self._prepared_input_tempdir:
+            self._append_log(_("RAW preview fallback active. Using embedded JPEG previews for timelapse input."))
         self._append_log(_("Running:") + " " + " ".join(cmd))
 
         try:
             self.runner.start(cmd)
         except Exception as exc:
+            self._cleanup_concat_file()
+            self._cleanup_prepared_inputs()
             self.encode_status.set_text(str(exc))
             return
 
@@ -1212,6 +1231,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.stop_button.set_sensitive(False)
         self.encode_status.set_text(_("FFmpeg finished with code ") + str(rc))
         self._cleanup_concat_file()
+        self._cleanup_prepared_inputs()
 
     def _cleanup_concat_file(self) -> None:
         if self._concat_list_path and os.path.exists(self._concat_list_path):
@@ -1220,6 +1240,11 @@ class MainWindow(Gtk.ApplicationWindow):
             except OSError:
                 pass
         self._concat_list_path = None
+
+    def _cleanup_prepared_inputs(self) -> None:
+        if self._prepared_input_tempdir and os.path.isdir(self._prepared_input_tempdir):
+            shutil.rmtree(self._prepared_input_tempdir, ignore_errors=True)
+        self._prepared_input_tempdir = None
 
     def _clear_log(self) -> None:
         self.log_buffer.set_text("")
@@ -1231,6 +1256,8 @@ class MainWindow(Gtk.ApplicationWindow):
 
     def on_close_request(self, _window: Gtk.ApplicationWindow) -> bool:
         self.runner.stop()
+        self._cleanup_concat_file()
+        self._cleanup_prepared_inputs()
         self.capture_page.shutdown()
         self.edit_page.shutdown()
         self.vapoursynth_process_page.shutdown()

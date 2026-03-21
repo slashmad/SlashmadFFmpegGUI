@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import os
 import shlex
+import shutil
 import tempfile
 from typing import Iterable
 
@@ -56,6 +57,13 @@ class InputCollection:
     warnings: list[str]
 
 
+@dataclass(frozen=True)
+class PreparedInputs:
+    paths: list[str]
+    warnings: list[str]
+    temp_dir: str | None
+
+
 def _is_supported(path: str) -> bool:
     ext = os.path.splitext(path)[1].lower()
     return ext in SUPPORTED_IMAGE_EXTENSIONS
@@ -105,10 +113,74 @@ def collect_inputs(items: Iterable[str]) -> InputCollection:
 
     if saw_raw:
         warnings.append(
-            "RAW files detected. Support depends on your FFmpeg build (libraw)."
+            "RAW files detected. Embedded JPEG previews will be used for timelapse rendering."
         )
 
     return InputCollection(paths=files, warnings=warnings)
+
+
+def _largest_embedded_jpeg(raw_path: str) -> bytes | None:
+    with open(raw_path, "rb") as handle:
+        data = handle.read()
+
+    largest: bytes | None = None
+    pos = 0
+    while True:
+        start = data.find(b"\xff\xd8\xff", pos)
+        if start == -1:
+            break
+        end = data.find(b"\xff\xd9", start + 2)
+        if end == -1:
+            break
+        segment = data[start : end + 2]
+        if largest is None or len(segment) > len(largest):
+            largest = segment
+        pos = start + 3
+
+    return largest
+
+
+def prepare_inputs_for_timelapse(image_paths: list[str]) -> PreparedInputs:
+    raw_paths = [path for path in image_paths if os.path.splitext(path)[1].lower() in RAW_EXTENSIONS]
+    if not raw_paths:
+        return PreparedInputs(paths=list(image_paths), warnings=[], temp_dir=None)
+
+    prepared_paths: list[str] = []
+    temp_dir = tempfile.mkdtemp(prefix="slashmad-raw-previews-")
+    used_names: set[str] = set()
+
+    try:
+        for path in image_paths:
+            ext = os.path.splitext(path)[1].lower()
+            if ext not in RAW_EXTENSIONS:
+                prepared_paths.append(path)
+                continue
+
+            preview = _largest_embedded_jpeg(path)
+            if preview is None:
+                raise RuntimeError(
+                    f"No embedded JPEG preview found in RAW file: {path}. "
+                    "Install darktable-cli or a RAW-capable FFmpeg/libraw setup for full RAW timelapse support."
+                )
+
+            base = os.path.splitext(os.path.basename(path))[0] + ".jpg"
+            candidate = base
+            suffix = 1
+            while candidate in used_names:
+                stem = os.path.splitext(base)[0]
+                candidate = f"{stem}-{suffix}.jpg"
+                suffix += 1
+            used_names.add(candidate)
+
+            preview_path = os.path.join(temp_dir, candidate)
+            with open(preview_path, "wb") as handle:
+                handle.write(preview)
+            prepared_paths.append(preview_path)
+
+        return PreparedInputs(paths=prepared_paths, warnings=[], temp_dir=temp_dir)
+    except Exception:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        raise
 
 
 def write_concat_file(image_paths: list[str], fps: float | None) -> str:

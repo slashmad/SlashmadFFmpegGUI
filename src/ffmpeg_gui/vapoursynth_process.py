@@ -126,6 +126,19 @@ class VSPipelinePreset:
     pixel_format: str
 
 
+@dataclass
+class VSQueueItem:
+    item_id: int
+    source_path: str
+    output_path: str
+    script_text: str
+    cmd_template: list[str]
+    preview: str
+    warnings: list[str]
+    status: str = "Queued"
+    last_rc: int | None = None
+
+
 PIPELINE_PRESETS: tuple[VSPipelinePreset, ...] = (
     VSPipelinePreset(
         preset_id="manual",
@@ -474,6 +487,18 @@ class VapourSynthProcessPage(Gtk.Box):
         self._source_probe_timeout_id = 0
         self._auto_detected_field_order: str | None = None
         self._auto_field_order_detail: str = ""
+        self._queue_items: list[VSQueueItem] = []
+        self._queue_next_id = 1
+        self._queue_running = False
+        self._queue_active_item_id: int | None = None
+        self._queue_stop_requested = False
+        self._queue_window: Gtk.Window | None = None
+        self._queue_listbox: Gtk.ListBox | None = None
+        self._queue_summary_label: Gtk.Label | None = None
+        self._queue_run_button_window: Gtk.Button | None = None
+        self._queue_stop_button_window: Gtk.Button | None = None
+        self._queue_remove_button_window: Gtk.Button | None = None
+        self._queue_clear_button_window: Gtk.Button | None = None
 
         self.runner = FFmpegRunner(self._on_runner_output, self._on_runner_exit)
 
@@ -541,6 +566,9 @@ class VapourSynthProcessPage(Gtk.Box):
                 "command_view",
                 "start_button",
                 "stop_button",
+                "add_queue_button",
+                "run_queue_button",
+                "show_queue_button",
                 "log_expander",
                 "log_view",
             ],
@@ -710,6 +738,9 @@ class VapourSynthProcessPage(Gtk.Box):
 
         self.start_button.connect("clicked", self.on_start_clicked)
         self.stop_button.connect("clicked", self.on_stop_clicked)
+        self.add_queue_button.connect("clicked", self.on_add_queue_clicked)
+        self.run_queue_button.connect("clicked", self.on_run_queue_clicked)
+        self.show_queue_button.connect("clicked", self.on_show_queue_clicked)
 
         self.vs_status_label.set_tooltip_text(
             _("Detected host tools for this tab (FFmpeg and vspipe).")
@@ -871,6 +902,15 @@ class VapourSynthProcessPage(Gtk.Box):
         self.stop_button.set_tooltip_text(
             _("Stop current VapourSynth export process.")
         )
+        self.add_queue_button.set_tooltip_text(
+            _("Add current VapourSynth export setup to queue.")
+        )
+        self.run_queue_button.set_tooltip_text(
+            _("Run queued VapourSynth exports sequentially.")
+        )
+        self.show_queue_button.set_tooltip_text(
+            _("Open external VapourSynth queue window.")
+        )
         self.log_expander.set_tooltip_text(
             _("Show or hide VapourSynth export log.")
         )
@@ -903,6 +943,7 @@ class VapourSynthProcessPage(Gtk.Box):
             (self.qtgmc_tuning_combo, 150),
         ):
             compact_widget(widget, width)
+        self._update_queue_buttons()
 
     def sync_capabilities(
         self,
@@ -1835,8 +1876,301 @@ class VapourSynthProcessPage(Gtk.Box):
         elif not self.runner.running:
             self._set_status_text("")
 
+    def _pending_queue_items(self) -> list[VSQueueItem]:
+        return [item for item in self._queue_items if item.status == "Queued"]
+
+    def _queue_window_visible(self) -> bool:
+        return bool(self._queue_window is not None and self._queue_window.get_visible())
+
+    def _sync_queue_toggle_button(self) -> None:
+        self.show_queue_button.set_label(_("Hide queue") if self._queue_window_visible() else _("Show queue"))
+
+    def _queue_item_by_id(self, item_id: int | None) -> VSQueueItem | None:
+        if item_id is None:
+            return None
+        for item in self._queue_items:
+            if item.item_id == item_id:
+                return item
+        return None
+
+    def _update_queue_buttons(self) -> None:
+        pending = len(self._pending_queue_items()) > 0
+        can_run = pending and (not self.runner.running) and (not self._queue_running)
+        self.run_queue_button.set_sensitive(can_run)
+
+        if self._queue_run_button_window is not None:
+            self._queue_run_button_window.set_sensitive(can_run)
+        if self._queue_stop_button_window is not None:
+            self._queue_stop_button_window.set_sensitive(self.runner.running and self._queue_running)
+        if self._queue_remove_button_window is not None:
+            self._queue_remove_button_window.set_sensitive((not self._queue_running) and bool(self._queue_items))
+        if self._queue_clear_button_window is not None:
+            has_done = any(item.status in {"Done", "Failed", "Stopped"} for item in self._queue_items)
+            self._queue_clear_button_window.set_sensitive((not self._queue_running) and has_done)
+        self._sync_queue_toggle_button()
+
+    def _refresh_queue_window(self) -> None:
+        if self._queue_window is None or self._queue_listbox is None:
+            return
+
+        while True:
+            row = self._queue_listbox.get_row_at_index(0)
+            if row is None:
+                break
+            self._queue_listbox.remove(row)
+
+        for item in self._queue_items:
+            row = Gtk.ListBoxRow()
+            row._queue_item_id = item.item_id  # type: ignore[attr-defined]
+
+            container = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
+            container.set_margin_top(5)
+            container.set_margin_bottom(5)
+            container.set_margin_start(5)
+            container.set_margin_end(5)
+
+            title = Gtk.Label(
+                label=f"#{item.item_id} [{item.status}] {os.path.basename(item.source_path)} -> {os.path.basename(item.output_path)}"
+            )
+            title.set_xalign(0.0)
+            title.set_wrap(True)
+            container.append(title)
+
+            detail = Gtk.Label(label=item.output_path)
+            detail.set_xalign(0.0)
+            detail.set_wrap(True)
+            detail.add_css_class("dim-label")
+            container.append(detail)
+
+            row.set_child(container)
+            self._queue_listbox.append(row)
+
+        pending = len(self._pending_queue_items())
+        summary_parts = [
+            _("Queued: ") + str(pending),
+            _("Total: ") + str(len(self._queue_items)),
+        ]
+        if self._queue_running and self._queue_active_item_id is not None:
+            summary_parts.append(_("Running item #") + str(self._queue_active_item_id))
+        if self._queue_summary_label is not None:
+            self._queue_summary_label.set_text(" | ".join(summary_parts))
+
+        self._update_queue_buttons()
+
+    def _ensure_queue_window(self) -> Gtk.Window:
+        if self._queue_window is not None:
+            return self._queue_window
+
+        root = self.get_root()
+        transient = root if isinstance(root, Gtk.Window) else None
+
+        win = Gtk.Window(title=_("VapourSynth Queue"), transient_for=transient, modal=False)
+        win.set_default_size(980, 440)
+        win.set_hide_on_close(True)
+
+        content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
+        content.set_margin_top(5)
+        content.set_margin_bottom(5)
+        content.set_margin_start(5)
+        content.set_margin_end(5)
+
+        summary = Gtk.Label(xalign=0.0)
+        content.append(summary)
+
+        scroller = Gtk.ScrolledWindow()
+        scroller.set_vexpand(True)
+        scroller.set_hexpand(True)
+        scroller.set_min_content_height(220)
+
+        listbox = Gtk.ListBox()
+        listbox.set_selection_mode(Gtk.SelectionMode.SINGLE)
+        scroller.set_child(listbox)
+        content.append(scroller)
+
+        actions = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
+        run_btn = Gtk.Button(label=_("Run queue"))
+        stop_btn = Gtk.Button(label=_("Stop queue"))
+        remove_btn = Gtk.Button(label=_("Remove selected"))
+        clear_btn = Gtk.Button(label=_("Clear completed"))
+        close_btn = Gtk.Button(label=_("Close"))
+        actions.append(run_btn)
+        actions.append(stop_btn)
+        actions.append(remove_btn)
+        actions.append(clear_btn)
+        actions.append(close_btn)
+        content.append(actions)
+
+        run_btn.connect("clicked", self.on_run_queue_clicked)
+        stop_btn.connect("clicked", self.on_stop_clicked)
+        remove_btn.connect("clicked", self.on_remove_queue_selected_clicked)
+        clear_btn.connect("clicked", self.on_clear_queue_completed_clicked)
+        close_btn.connect("clicked", self.on_show_queue_clicked)
+        win.connect("notify::visible", lambda *_args: self._sync_queue_toggle_button())
+
+        win.set_child(content)
+
+        self._queue_window = win
+        self._queue_listbox = listbox
+        self._queue_summary_label = summary
+        self._queue_run_button_window = run_btn
+        self._queue_stop_button_window = stop_btn
+        self._queue_remove_button_window = remove_btn
+        self._queue_clear_button_window = clear_btn
+        self._refresh_queue_window()
+        return win
+
+    def _queue_script_command(self, item: VSQueueItem, script_path: str) -> list[str]:
+        cmd = [part.replace("<vapoursynth-script.vpy>", script_path) for part in item.cmd_template]
+        if not any("<vapoursynth-script.vpy>" in part for part in item.cmd_template):
+            raise RuntimeError(_("Queue command template is missing script placeholder."))
+        return cmd
+
+    def on_add_queue_clicked(self, _button: Gtk.Button) -> None:
+        try:
+            cmd_template, preview, warnings = self._build_export_command(for_preview=True)
+        except RuntimeError as exc:
+            self._set_status_text(str(exc))
+            return
+
+        source_path = self.source_entry.get_text().strip()
+        output_path = self.output_entry.get_text().strip()
+        script_text = self._build_script_text(source_path)
+        if not source_path or not output_path or not script_text.strip():
+            self._set_status_text(_("Cannot add queue item: source, output, and script are required."))
+            return
+
+        item = VSQueueItem(
+            item_id=self._queue_next_id,
+            source_path=source_path,
+            output_path=output_path,
+            script_text=script_text,
+            cmd_template=cmd_template,
+            preview=preview,
+            warnings=list(warnings),
+        )
+        self._queue_next_id += 1
+        self._queue_items.append(item)
+
+        self._append_log(
+            _("[queue] Added item #{id}: {source} -> {output}").format(
+                id=item.item_id,
+                source=os.path.basename(item.source_path),
+                output=item.output_path,
+            )
+        )
+        if item.warnings:
+            self._append_log("[queue] " + " | ".join(item.warnings))
+        self._set_status_text(_("Added queue item #") + str(item.item_id))
+        self._refresh_queue_window()
+        self._ensure_queue_window().present()
+
+    def _start_next_queue_item(self) -> bool:
+        if not self._queue_running:
+            return False
+        next_item = next((item for item in self._queue_items if item.status == "Queued"), None)
+        if next_item is None:
+            return False
+
+        try:
+            script_path = self._write_script_file(next_item.script_text)
+            cmd = self._queue_script_command(next_item, script_path)
+        except Exception as exc:
+            next_item.status = "Failed"
+            self._queue_running = False
+            self._queue_active_item_id = None
+            self._set_status_text(_("Queue preparation failed for item #{id}: {err}").format(id=next_item.item_id, err=exc))
+            self._refresh_queue_window()
+            return False
+
+        next_item.status = "Running"
+        self._queue_active_item_id = next_item.item_id
+        self._queue_stop_requested = False
+        self.command_buffer.set_text(next_item.preview.replace("<vapoursynth-script.vpy>", script_path))
+        self._append_log(
+            _("[queue] Running item #{id}: {output}").format(
+                id=next_item.item_id,
+                output=next_item.output_path,
+            )
+        )
+        if next_item.warnings:
+            self._append_log("[queue] " + " | ".join(next_item.warnings))
+        self._append_log(_("Running:") + " " + _shell_preview(cmd))
+
+        try:
+            self.runner.start(cmd)
+        except Exception as exc:
+            next_item.status = "Failed"
+            self._queue_running = False
+            self._queue_active_item_id = None
+            self._cleanup_script_file()
+            self._set_status_text(_("Queue start failed for item #{id}: {err}").format(id=next_item.item_id, err=exc))
+            self._refresh_queue_window()
+            return False
+
+        self.start_button.set_sensitive(False)
+        self.stop_button.set_sensitive(True)
+        self._set_status_text(
+            _("Queue running item #{id} ({done}/{total})").format(
+                id=next_item.item_id,
+                done=len([item for item in self._queue_items if item.status == "Done"]),
+                total=len(self._queue_items),
+            )
+        )
+        self._refresh_queue_window()
+        return True
+
+    def on_run_queue_clicked(self, _button: Gtk.Button) -> None:
+        if self._queue_running:
+            self._ensure_queue_window().present()
+            return
+        if self.runner.running:
+            self._set_status_text(_("Another export is currently running."))
+            return
+        if not self._pending_queue_items():
+            self._set_status_text(_("Queue is empty."))
+            self._ensure_queue_window().present()
+            return
+
+        self._queue_running = True
+        if not self._start_next_queue_item():
+            self._queue_running = False
+        self._update_queue_buttons()
+
+    def on_show_queue_clicked(self, _button: Gtk.Button) -> None:
+        win = self._ensure_queue_window()
+        if win.get_visible():
+            win.hide()
+        else:
+            win.present()
+        self._sync_queue_toggle_button()
+
+    def on_remove_queue_selected_clicked(self, _button: Gtk.Button) -> None:
+        if self._queue_running or self._queue_listbox is None:
+            return
+        row = self._queue_listbox.get_selected_row()
+        if row is None:
+            return
+        item_id = getattr(row, "_queue_item_id", None)
+        if item_id is None:
+            return
+        self._queue_items = [item for item in self._queue_items if item.item_id != item_id]
+        self._set_status_text(_("Removed queue item #") + str(item_id))
+        self._refresh_queue_window()
+
+    def on_clear_queue_completed_clicked(self, _button: Gtk.Button) -> None:
+        if self._queue_running:
+            return
+        before = len(self._queue_items)
+        self._queue_items = [item for item in self._queue_items if item.status not in {"Done", "Failed", "Stopped"}]
+        removed = before - len(self._queue_items)
+        self._set_status_text(_("Cleared completed queue items: ") + str(removed))
+        self._refresh_queue_window()
+
     def on_start_clicked(self, _button: Gtk.Button) -> None:
         if self.runner.running:
+            return
+        if self._queue_running:
+            self._set_status_text(_("Queue is running. Stop queue before starting manual export."))
             return
         try:
             cmd, preview, warnings = self._build_export_command(for_preview=False)
@@ -1858,8 +2192,11 @@ class VapourSynthProcessPage(Gtk.Box):
 
         self.start_button.set_sensitive(False)
         self.stop_button.set_sensitive(True)
+        self._update_queue_buttons()
 
     def on_stop_clicked(self, _button: Gtk.Button) -> None:
+        if self._queue_running:
+            self._queue_stop_requested = True
         self.runner.stop()
 
     def _on_runner_output(self, line: str) -> None:
@@ -1869,11 +2206,44 @@ class VapourSynthProcessPage(Gtk.Box):
         GLib.idle_add(self._handle_runner_exit, rc)
 
     def _handle_runner_exit(self, rc: int) -> None:
+        self._cleanup_script_file()
+        queue_handled = False
+
+        if self._queue_active_item_id is not None:
+            queue_handled = True
+            active = self._queue_item_by_id(self._queue_active_item_id)
+            if active is not None:
+                active.last_rc = rc
+                if self._queue_stop_requested:
+                    active.status = "Stopped"
+                    self._queue_running = False
+                    self._set_status_text(_("Queue stopped by user."))
+                elif rc == 0:
+                    active.status = "Done"
+                else:
+                    active.status = "Failed"
+                    self._queue_running = False
+                    self._set_status_text(
+                        _("Queue stopped on failed item #{id} (code {rc}).").format(id=active.item_id, rc=rc)
+                    )
+
+            self._queue_active_item_id = None
+            self._queue_stop_requested = False
+            self._refresh_queue_window()
+
+            if self._queue_running and self._start_next_queue_item():
+                return
+            if self._queue_running:
+                self._queue_running = False
+                self._set_status_text(_("Queue finished."))
+
         self.start_button.set_sensitive(True)
         self.stop_button.set_sensitive(False)
-        self._set_status_text(_("VapourSynth export finished with code ") + str(rc))
-        self._cleanup_script_file()
-        self.update_command_preview()
+        if not self._queue_running:
+            if not queue_handled:
+                self._set_status_text(_("VapourSynth export finished with code ") + str(rc))
+                self.update_command_preview()
+        self._update_queue_buttons()
 
     def on_choose_source_clicked(self, _button: Gtk.Button) -> None:
         dialog = Gtk.FileDialog(title=_("Choose source media"))
@@ -1933,5 +2303,12 @@ class VapourSynthProcessPage(Gtk.Box):
         if self._source_probe_timeout_id:
             GLib.source_remove(self._source_probe_timeout_id)
             self._source_probe_timeout_id = 0
+        if self._queue_window is not None:
+            try:
+                self._queue_window.destroy()
+            except Exception:
+                pass
+            self._queue_window = None
+        self._sync_queue_toggle_button()
         self.runner.stop()
         self._cleanup_script_file()

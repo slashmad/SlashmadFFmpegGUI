@@ -683,6 +683,7 @@ class CapturePage(Gtk.Box):
         self._ffv1_reference_bitrate, self._ffv1_reference_path = _detect_ffv1_reference_bitrate()
 
         self._audio_source_backends: dict[str, str] = {}
+        self._current_video_formats: list[dict[str, Any]] = []
 
         self._preview_pipeline = None
         self._preview_bus = None
@@ -690,6 +691,7 @@ class CapturePage(Gtk.Box):
         self._preview_volume_element = None
         self._preview_running = False
         self._preview_include_audio = False
+        self._preview_audio_level_available = False
         self._preview_audio_watchdog_id: int | None = None
         self._preview_audio_last_level_monotonic = 0.0
         self._preview_audio_restart_count = 0
@@ -700,6 +702,8 @@ class CapturePage(Gtk.Box):
         self._capture_audio_open_error_reported = False
         self._capture_xrun_reported = False
         self._capture_monitor_uri = ""
+        self._capture_auto_stop_timer_id: int | None = None
+        self._capture_auto_stop_deadline_monotonic = 0.0
 
         self.capture_runner = FFmpegRunner(self._on_capture_output, self._on_capture_exit)
 
@@ -714,6 +718,10 @@ class CapturePage(Gtk.Box):
             builder,
             [
                 "capture_info_label",
+                "capture_auto_stop_check",
+                "capture_auto_stop_hours_spin",
+                "capture_auto_stop_minutes_spin",
+                "capture_auto_stop_countdown_label",
                 "profile_combo",
                 "profile_info_label",
                 "video_device_combo",
@@ -860,6 +868,8 @@ class CapturePage(Gtk.Box):
         self.capture_extra_entry.connect("changed", self.on_capture_settings_changed)
 
         for widget, width in (
+            (self.capture_auto_stop_hours_spin, 70),
+            (self.capture_auto_stop_minutes_spin, 70),
             (self.profile_combo, 240),
             (self.video_device_combo, 260),
             (self.video_input_combo, 180),
@@ -881,6 +891,14 @@ class CapturePage(Gtk.Box):
 
         self.capture_start_button.connect("clicked", self.on_capture_start_clicked)
         self.capture_stop_button.connect("clicked", self.on_capture_stop_clicked)
+
+        self.capture_auto_stop_check.set_active(False)
+        self.capture_auto_stop_check.connect("toggled", self.on_capture_auto_stop_changed)
+        self.capture_auto_stop_hours_spin.set_value(0)
+        self.capture_auto_stop_hours_spin.connect("value-changed", self.on_capture_auto_stop_changed)
+        self.capture_auto_stop_minutes_spin.set_value(0)
+        self.capture_auto_stop_minutes_spin.connect("value-changed", self.on_capture_auto_stop_changed)
+        self._update_capture_auto_stop_controls()
 
     def sync_capabilities(
         self,
@@ -1110,9 +1128,50 @@ class CapturePage(Gtk.Box):
 
         if selected and self.capture_pixfmt_combo.set_active_id(selected):
             return
-        if self.capture_pixfmt_combo.set_active_id("yuv420p"):
-            return
         self.capture_pixfmt_combo.set_active_id("auto")
+
+    def _archive_profile_active(self) -> bool:
+        return (self.profile_combo.get_active_id() or "") == "vhs_archive_ffv1"
+
+    def _preferred_archive_input_fourcc(self) -> str:
+        available = {str(fmt.get("fourcc") or "").upper() for fmt in self._current_video_formats}
+        for fourcc in ("YUYV", "UYVY", "YVYU", "YU12", "YV12", "NV12", "NV21", "MJPG"):
+            if fourcc in available:
+                return fourcc
+        return ""
+
+    def _apply_archive_capture_guardrails(self) -> list[str]:
+        if not self._archive_profile_active():
+            return []
+
+        warnings: list[str] = []
+
+        # Preserve raw fields for later processing; archive capture should not deinterlace.
+        if self.deinterlace_check.get_active():
+            self.deinterlace_check.set_active(False)
+            warnings.append(_("VHS Archive guardrail: deinterlace disabled to preserve raw interlaced fields."))
+
+        # Archive should keep native timing unless user explicitly exports elsewhere.
+        if not self.match_fps_check.get_active():
+            self.match_fps_check.set_active(True)
+            warnings.append(_("VHS Archive guardrail: Match source FPS enabled."))
+
+        # If format is still auto, prefer an uncompressed capture FOURCC.
+        if not (self.video_format_combo.get_active_id() or ""):
+            preferred_fourcc = self._preferred_archive_input_fourcc()
+            if preferred_fourcc and self.video_format_combo.set_active_id(preferred_fourcc):
+                warnings.append(
+                    _("VHS Archive guardrail: input format auto-selected to {fourcc}.").format(
+                        fourcc=preferred_fourcc
+                    )
+                )
+
+        # If pixfmt is auto, lock to 4:2:2 lossless pipeline for FFV1 archive.
+        if (self.capture_pixfmt_combo.get_active_id() or "auto") == "auto":
+            if self.capture_pixfmt_combo.set_active_id("yuv422p"):
+                warnings.append(_("VHS Archive guardrail: pixel format set to yuv422p."))
+
+        return warnings
 
     def _populate_capture_preset_combo(self, codec: str | None) -> None:
         selected = self.capture_preset_combo.get_active_id()
@@ -1192,6 +1251,8 @@ class CapturePage(Gtk.Box):
 
     def _refresh_video_format_options(self) -> None:
         device = self.video_device_combo.get_active_id() or ""
+        current_format = self.video_format_combo.get_active_id() or ""
+        current_size = self.video_size_combo.get_active_id() or ""
 
         self.video_format_combo.remove_all()
         self.video_size_combo.remove_all()
@@ -1200,11 +1261,13 @@ class CapturePage(Gtk.Box):
         self.video_size_combo.append("", _("auto"))
 
         if not device:
+            self._current_video_formats = []
             self.video_format_combo.set_active_id("")
             self.video_size_combo.set_active_id("")
             return
 
         formats = list_video_formats(device)
+        self._current_video_formats = formats
 
         size_values: set[str] = set()
         for fmt in formats:
@@ -1220,8 +1283,21 @@ class CapturePage(Gtk.Box):
         for size in sorted(size_values):
             self.video_size_combo.append(size, size)
 
-        self.video_format_combo.set_active_id("")
-        self.video_size_combo.set_active_id("720x576" if "720x576" in size_values else "")
+        if current_format and self.video_format_combo.set_active_id(current_format):
+            pass
+        else:
+            preferred_fourcc = ""
+            if self._archive_profile_active():
+                preferred_fourcc = self._preferred_archive_input_fourcc()
+            if preferred_fourcc and self.video_format_combo.set_active_id(preferred_fourcc):
+                pass
+            else:
+                self.video_format_combo.set_active_id("")
+
+        if current_size and self.video_size_combo.set_active_id(current_size):
+            pass
+        else:
+            self.video_size_combo.set_active_id("720x576" if "720x576" in size_values else "")
 
     def _refresh_video_input_options(self) -> None:
         device = self.video_device_combo.get_active_id() or ""
@@ -1559,6 +1635,16 @@ class CapturePage(Gtk.Box):
         if self.capture_runner.running:
             return
 
+        auto_stop_seconds = 0
+        if self.capture_auto_stop_check.get_active():
+            auto_stop_seconds = self._capture_auto_stop_seconds()
+            if auto_stop_seconds <= 0:
+                self._set_capture_status_text(_("Set auto-stop duration to at least 1 minute."))
+                return
+
+        for warning in self._apply_archive_capture_guardrails():
+            self._append_capture_status_warning(warning)
+
         preview_was_running = self._preview_running
         live_policy = self._live_during_capture_policy()
         # Keep single-device monitor only when preview is active at capture start.
@@ -1629,8 +1715,13 @@ class CapturePage(Gtk.Box):
 
         self.capture_start_button.set_sensitive(False)
         self.capture_stop_button.set_sensitive(True)
+        self.capture_auto_stop_check.set_sensitive(False)
+        self.capture_auto_stop_hours_spin.set_sensitive(False)
+        self.capture_auto_stop_minutes_spin.set_sensitive(False)
+        self._start_capture_auto_stop_timer(auto_stop_seconds)
 
     def on_capture_stop_clicked(self, _button: Gtk.Button) -> None:
+        self._clear_capture_auto_stop_timer()
         self.capture_runner.stop()
 
     def _on_capture_output(self, line: str) -> None:
@@ -1671,8 +1762,11 @@ class CapturePage(Gtk.Box):
                 self.stop_preview()
             self._capture_monitor_uri = ""
 
+        self._clear_capture_auto_stop_timer()
         self.capture_start_button.set_sensitive(True)
         self.capture_stop_button.set_sensitive(False)
+        self.capture_auto_stop_check.set_sensitive(True)
+        self._update_capture_auto_stop_controls()
         self._set_capture_status_text(_("Capture finished with code ") + str(rc))
 
     def _clear_capture_log(self) -> None:
@@ -1686,6 +1780,85 @@ class CapturePage(Gtk.Box):
     def _set_capture_status_text(self, text: str) -> None:
         self.capture_status_label.set_text(text)
         self.capture_status_label.set_visible(bool(text.strip()))
+
+    def on_capture_auto_stop_changed(self, _widget) -> None:
+        self._update_capture_auto_stop_controls()
+
+    def _update_capture_auto_stop_controls(self) -> None:
+        enabled = bool(self.capture_auto_stop_check.get_active())
+        self.capture_auto_stop_hours_spin.set_sensitive(enabled and not self.capture_runner.running)
+        self.capture_auto_stop_minutes_spin.set_sensitive(enabled and not self.capture_runner.running)
+        if not enabled and not self.capture_runner.running and self._capture_auto_stop_timer_id is None:
+            self.capture_auto_stop_countdown_label.set_text("")
+            self.capture_auto_stop_countdown_label.set_visible(False)
+
+    def _capture_auto_stop_seconds(self) -> int:
+        hours = int(self.capture_auto_stop_hours_spin.get_value())
+        minutes = int(self.capture_auto_stop_minutes_spin.get_value())
+        return max(0, hours * 3600 + minutes * 60)
+
+    @staticmethod
+    def _format_hhmmss(total_seconds: int) -> str:
+        safe = max(0, int(total_seconds))
+        hours = safe // 3600
+        minutes = (safe % 3600) // 60
+        seconds = safe % 60
+        return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+    def _clear_capture_auto_stop_timer(self) -> None:
+        if self._capture_auto_stop_timer_id is not None:
+            try:
+                GLib.source_remove(self._capture_auto_stop_timer_id)
+            except Exception:
+                pass
+        self._capture_auto_stop_timer_id = None
+        self._capture_auto_stop_deadline_monotonic = 0.0
+        self.capture_auto_stop_countdown_label.set_text("")
+        self.capture_auto_stop_countdown_label.set_visible(False)
+
+    def _start_capture_auto_stop_timer(self, duration_seconds: int) -> None:
+        self._clear_capture_auto_stop_timer()
+        if duration_seconds <= 0:
+            return
+        self._capture_auto_stop_deadline_monotonic = time.monotonic() + float(duration_seconds)
+        self._capture_auto_stop_timer_id = GLib.timeout_add(1000, self._on_capture_auto_stop_tick)
+        self._update_capture_auto_stop_countdown_label()
+        self._append_capture_log(
+            f"[capture] Auto-stop timer: {self._format_hhmmss(duration_seconds)}"
+        )
+
+    def _update_capture_auto_stop_countdown_label(self) -> None:
+        if self._capture_auto_stop_deadline_monotonic <= 0:
+            self.capture_auto_stop_countdown_label.set_text("")
+            self.capture_auto_stop_countdown_label.set_visible(False)
+            return
+        remaining = max(0, int(self._capture_auto_stop_deadline_monotonic - time.monotonic()))
+        self.capture_auto_stop_countdown_label.set_text(
+            _("Auto-stop in: ") + self._format_hhmmss(remaining)
+        )
+        self.capture_auto_stop_countdown_label.set_visible(True)
+
+    def _on_capture_auto_stop_tick(self) -> bool:
+        if not self.capture_runner.running:
+            self._capture_auto_stop_timer_id = None
+            self._capture_auto_stop_deadline_monotonic = 0.0
+            self.capture_auto_stop_countdown_label.set_text("")
+            self.capture_auto_stop_countdown_label.set_visible(False)
+            return False
+
+        remaining = int(self._capture_auto_stop_deadline_monotonic - time.monotonic())
+        if remaining <= 0:
+            self._capture_auto_stop_timer_id = None
+            self._capture_auto_stop_deadline_monotonic = 0.0
+            self.capture_auto_stop_countdown_label.set_text(_("Auto-stop reached."))
+            self.capture_auto_stop_countdown_label.set_visible(True)
+            self._append_capture_log("[capture] Auto-stop timer reached; stopping capture.")
+            self._append_capture_status_warning(_("Auto-stop timer reached. Stopping capture."))
+            self.capture_runner.stop()
+            return False
+
+        self._update_capture_auto_stop_countdown_label()
+        return True
 
     def on_preview_start_clicked(self, _button: Gtk.Button) -> None:
         if self._capture_monitor_uri:
@@ -1719,6 +1892,27 @@ class CapturePage(Gtk.Box):
         else:
             self.preview_level_bar.set_text(_("Audio level"))
 
+    def _create_preview_audio_sink(self):
+        for sink_name in ("pipewiresink", "pulsesink", "autoaudiosink"):
+            sink = Gst.ElementFactory.make(sink_name, "asink")
+            if sink is None:
+                continue
+            if sink.find_property("sync") is not None:
+                sink.set_property("sync", False)
+            return sink, sink_name
+        return None, ""
+
+    def _preview_audio_bin_description(self) -> tuple[str, str]:
+        for sink_name in ("pipewiresink", "pulsesink", "autoaudiosink"):
+            if Gst.ElementFactory.find(sink_name) is None:
+                continue
+            return (
+                "volume name=avolume ! level name=alevel interval=100000000 post-messages=true ! "
+                f"{sink_name} sync=false",
+                sink_name,
+            )
+        return "", ""
+
     def on_preview_audio_control_changed(self, _widget) -> None:
         if self._preview_volume_element is None:
             return
@@ -1739,7 +1933,7 @@ class CapturePage(Gtk.Box):
 
     def _start_preview_audio_watchdog(self) -> None:
         self._stop_preview_audio_watchdog()
-        if not self._preview_include_audio:
+        if not self._preview_include_audio or not self._preview_audio_level_available:
             return
         self._preview_audio_last_level_monotonic = time.monotonic()
         self._preview_pending_watchdog_action = False
@@ -1935,6 +2129,7 @@ class CapturePage(Gtk.Box):
             return
 
         self._preview_volume_element = None
+        self._preview_audio_level_available = False
 
         audio_source = self.audio_source_combo.get_active_id() or ""
         include_audio_preview = with_audio and bool(audio_source)
@@ -1955,7 +2150,7 @@ class CapturePage(Gtk.Box):
             aresample = Gst.ElementFactory.make("audioresample", "aresample")
             volume = Gst.ElementFactory.make("volume", "avolume")
             level = Gst.ElementFactory.make("level", "alevel")
-            asink = Gst.ElementFactory.make("autoaudiosink", "asink")
+            asink, audio_sink_name = self._create_preview_audio_sink()
 
             if all([asrc, aqueue, aconvert, aresample, volume, level, asink]):
                 if asrc.find_property("do-timestamp") is not None:
@@ -1973,11 +2168,6 @@ class CapturePage(Gtk.Box):
                     aqueue.set_property("max-size-time", 0)
                 if aqueue.find_property("leaky") is not None:
                     aqueue.set_property("leaky", 2)
-
-                if asink.find_property("sync") is not None:
-                    asink.set_property("sync", False)
-                if asink.find_property("async") is not None:
-                    asink.set_property("async", False)
 
                 level.set_property("interval", 100_000_000)
                 level.set_property("post-messages", True)
@@ -2000,6 +2190,9 @@ class CapturePage(Gtk.Box):
                 )
                 if linked_ok:
                     self._preview_volume_element = volume
+                    self._preview_audio_level_available = True
+                    if audio_sink_name:
+                        self._append_capture_log("[preview] Live audio sink: " + audio_sink_name)
                 else:
                     audio_branch_issue = _("Audio preview pipeline could not be linked.")
             else:
@@ -2106,16 +2299,15 @@ class CapturePage(Gtk.Box):
 
         include_audio_preview = bool(with_audio)
         self._preview_volume_element = None
+        self._preview_audio_level_available = False
 
         if include_audio_preview:
             audio_branch_issue = _("Audio preview pipeline could not be started.")
             audio_bin = None
+            audio_bin_description, audio_sink_name = self._preview_audio_bin_description()
             try:
-                audio_bin = Gst.parse_bin_from_description(
-                    "volume name=avolume ! level name=alevel interval=100000000 post-messages=true ! "
-                    "autoaudiosink sync=false async=false",
-                    True,
-                )
+                if audio_bin_description:
+                    audio_bin = Gst.parse_bin_from_description(audio_bin_description, True)
             except Exception:
                 audio_bin = None
 
@@ -2127,25 +2319,39 @@ class CapturePage(Gtk.Box):
 
             if audio_bin is not None:
                 volume = audio_bin.get_by_name("avolume")
+                level = audio_bin.get_by_name("alevel")
                 if volume is not None:
                     self._preview_volume_element = volume
+                    self._preview_audio_level_available = level is not None
+                    if audio_sink_name:
+                        self._append_capture_log("[preview] Live audio sink: " + audio_sink_name)
                 else:
                     audio_branch_issue = _("Audio preview pipeline could not be linked.")
             else:
                 audio_branch_issue = _("Missing GStreamer elements for audio preview.")
 
             if self._preview_volume_element is None:
-                if self._auto_fallback_enabled():
-                    self._append_capture_status_warning(_("Live audio fallback activated."))
-                    self._append_capture_log("[preview] Live audio fallback activated (capture monitor setup).")
-                    self._preview_audio_fallback_reason = audio_branch_issue
-                    try:
-                        pipeline.set_state(Gst.State.NULL)
-                    except Exception:
-                        pass
-                    self.start_preview_from_uri(uri, with_audio=False, preserve_watchdog_state=True)
-                    return
-                self._set_preview_status(audio_branch_issue)
+                # Keep monitor audio by using playbin's default sink if custom sink setup fails.
+                # In this mode we do not get level messages, so watchdog stays disabled.
+                fallback_note = _("Audio meter unavailable; using default audio sink.")
+                if pipeline.find_property("volume") is not None:
+                    self._preview_volume_element = pipeline
+                    self._append_capture_log("[preview] " + fallback_note)
+                    self._append_capture_log("[preview] " + audio_branch_issue)
+                    if self._auto_fallback_enabled():
+                        self._append_capture_status_warning(fallback_note)
+                else:
+                    if self._auto_fallback_enabled():
+                        self._append_capture_status_warning(_("Live audio fallback activated."))
+                        self._append_capture_log("[preview] Live audio fallback activated (capture monitor setup).")
+                        self._preview_audio_fallback_reason = audio_branch_issue
+                        try:
+                            pipeline.set_state(Gst.State.NULL)
+                        except Exception:
+                            pass
+                        self.start_preview_from_uri(uri, with_audio=False, preserve_watchdog_state=True)
+                        return
+                    self._set_preview_status(audio_branch_issue)
 
         if not include_audio_preview and pipeline.find_property("mute") is not None:
             pipeline.set_property("mute", True)
@@ -2256,6 +2462,7 @@ class CapturePage(Gtk.Box):
         if not self._preview_running:
             self._stop_preview_audio_watchdog()
             self._preview_include_audio = False
+            self._preview_audio_level_available = False
             self._preview_source_mode = "device"
             self._preview_source_uri = ""
             self._set_audio_level(0.0)
@@ -2271,6 +2478,7 @@ class CapturePage(Gtk.Box):
         self._preview_bus_handler_id = None
         self._preview_volume_element = None
         self._preview_include_audio = False
+        self._preview_audio_level_available = False
         self._preview_running = False
         self._preview_source_mode = "device"
         self._preview_source_uri = ""
@@ -2303,6 +2511,7 @@ class CapturePage(Gtk.Box):
 
     def shutdown(self) -> None:
         self.stop_preview()
+        self._clear_capture_auto_stop_timer()
         self.capture_runner.stop()
 
     def _append_capture_status_warning(self, text: str) -> None:
