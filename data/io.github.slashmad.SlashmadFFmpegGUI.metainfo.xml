@@ -51,6 +51,11 @@
     </screenshot>
   </screenshots>
   <releases>
+    <release version="0.2.7" date="2026-03-21">
+      <description>
+        <p>Fixes Flatpak live preview so audio and video work before capture again.</p>
+      </description>
+    </release>
     <release version="0.2.6" date="2026-03-03" />
   </releases>
   <launchable type="desktop-id">io.github.slashmad.SlashmadFFmpegGUI.desktop</launchable>

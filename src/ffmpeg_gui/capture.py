@@ -688,6 +688,9 @@ class CapturePage(Gtk.Box):
         self._preview_pipeline = None
         self._preview_bus = None
         self._preview_bus_handler_id: int | None = None
+        self._preview_audio_pipeline = None
+        self._preview_audio_bus = None
+        self._preview_audio_bus_handler_id: int | None = None
         self._preview_volume_element = None
         self._preview_running = False
         self._preview_include_audio = False
@@ -1892,26 +1895,136 @@ class CapturePage(Gtk.Box):
         else:
             self.preview_level_bar.set_text(_("Audio level"))
 
+    def _preview_audio_sink_candidates(self) -> tuple[str, ...]:
+        if _is_flatpak():
+            # Flatpak exposes the Pulse socket reliably, so prefer pulsesink here.
+            return ("pulsesink", "autoaudiosink", "pipewiresink")
+        return ("autoaudiosink", "pipewiresink", "pulsesink")
+
     def _create_preview_audio_sink(self):
-        for sink_name in ("pipewiresink", "pulsesink", "autoaudiosink"):
+        for sink_name in self._preview_audio_sink_candidates():
             sink = Gst.ElementFactory.make(sink_name, "asink")
             if sink is None:
                 continue
             if sink.find_property("sync") is not None:
                 sink.set_property("sync", False)
+            if sink.find_property("async") is not None:
+                sink.set_property("async", False)
             return sink, sink_name
         return None, ""
 
     def _preview_audio_bin_description(self) -> tuple[str, str]:
-        for sink_name in ("pipewiresink", "pulsesink", "autoaudiosink"):
+        for sink_name in self._preview_audio_sink_candidates():
             if Gst.ElementFactory.find(sink_name) is None:
                 continue
             return (
                 "volume name=avolume ! level name=alevel interval=100000000 post-messages=true ! "
-                f"{sink_name} sync=false",
+                f"{sink_name} sync=false async=false",
                 sink_name,
             )
         return "", ""
+
+    def _cleanup_preview_audio_pipeline(self) -> None:
+        audio_pipeline = self._preview_audio_pipeline
+        audio_bus = self._preview_audio_bus
+        audio_handler_id = self._preview_audio_bus_handler_id
+
+        self._preview_audio_pipeline = None
+        self._preview_audio_bus = None
+        self._preview_audio_bus_handler_id = None
+
+        if audio_bus is not None:
+            if audio_handler_id is not None:
+                try:
+                    audio_bus.disconnect(audio_handler_id)
+                except Exception:
+                    pass
+            try:
+                audio_bus.remove_signal_watch()
+            except Exception:
+                pass
+
+        if audio_pipeline is not None:
+            try:
+                audio_pipeline.set_state(Gst.State.NULL)
+            except Exception:
+                pass
+
+    def _build_standalone_preview_audio_pipeline(
+        self,
+        audio_source: str,
+        backend: str,
+    ) -> tuple[Any | None, Any | None, bool, str, str]:
+        pipeline = Gst.Pipeline.new("capture-preview-audio")
+        if pipeline is None:
+            return None, None, False, "", _("Could not create audio preview pipeline.")
+
+        if backend == "alsa":
+            asrc = Gst.ElementFactory.make("alsasrc", "asrc")
+            if asrc is not None:
+                asrc.set_property("device", audio_source)
+        else:
+            asrc = Gst.ElementFactory.make("pulsesrc", "asrc")
+            if asrc is not None and audio_source:
+                asrc.set_property("device", audio_source)
+
+        aqueue = Gst.ElementFactory.make("queue", "aqueue")
+        aconvert = Gst.ElementFactory.make("audioconvert", "aconvert")
+        aresample = Gst.ElementFactory.make("audioresample", "aresample")
+        volume = Gst.ElementFactory.make("volume", "avolume")
+        level = Gst.ElementFactory.make("level", "alevel")
+        asink, audio_sink_name = self._create_preview_audio_sink()
+
+        if not all([asrc, aqueue, aconvert, aresample, volume, level, asink]):
+            try:
+                pipeline.set_state(Gst.State.NULL)
+            except Exception:
+                pass
+            return None, None, False, "", _("Missing GStreamer elements for audio preview.")
+
+        if asrc.find_property("do-timestamp") is not None:
+            asrc.set_property("do-timestamp", True)
+        if asrc.find_property("buffer-time") is not None:
+            asrc.set_property("buffer-time", 400000)
+        if asrc.find_property("latency-time") is not None:
+            asrc.set_property("latency-time", 50000)
+
+        if aqueue.find_property("max-size-buffers") is not None:
+            aqueue.set_property("max-size-buffers", 16)
+        if aqueue.find_property("max-size-bytes") is not None:
+            aqueue.set_property("max-size-bytes", 0)
+        if aqueue.find_property("max-size-time") is not None:
+            aqueue.set_property("max-size-time", 0)
+        if aqueue.find_property("leaky") is not None:
+            aqueue.set_property("leaky", 2)
+
+        level.set_property("interval", 100_000_000)
+        level.set_property("post-messages", True)
+
+        pipeline.add(asrc)
+        pipeline.add(aqueue)
+        pipeline.add(aconvert)
+        pipeline.add(aresample)
+        pipeline.add(volume)
+        pipeline.add(level)
+        pipeline.add(asink)
+
+        linked_ok = (
+            asrc.link(aqueue)
+            and aqueue.link(aconvert)
+            and aconvert.link(aresample)
+            and aresample.link(volume)
+            and volume.link(level)
+            and level.link(asink)
+        )
+        if not linked_ok:
+            try:
+                pipeline.set_state(Gst.State.NULL)
+            except Exception:
+                pass
+            return None, None, False, "", _("Audio preview pipeline could not be linked.")
+
+        return pipeline, volume, True, audio_sink_name, ""
 
     def on_preview_audio_control_changed(self, _widget) -> None:
         if self._preview_volume_element is None:
@@ -2108,26 +2221,59 @@ class CapturePage(Gtk.Box):
 
         pipeline.add(vsrc)
         pipeline.add(vqueue)
-        pipeline.add(vconvert)
         if vcaps is not None:
             pipeline.add(vcaps)
+        pipeline.add(vconvert)
         pipeline.add(vsink)
 
-        if not vsrc.link(vqueue) or not vqueue.link(vconvert):
-            self._set_preview_status(_("Could not link video preview pipeline."))
-            pipeline.set_state(Gst.State.NULL)
-            return
-
         if vcaps is not None:
-            video_link_ok = vconvert.link(vcaps) and vcaps.link(vsink)
+            video_link_ok = vsrc.link(vqueue) and vqueue.link(vcaps) and vcaps.link(vconvert)
         else:
-            video_link_ok = vconvert.link(vsink)
+            video_link_ok = vsrc.link(vqueue) and vqueue.link(vconvert)
 
         if not video_link_ok:
             self._set_preview_status(_("Could not link video preview pipeline."))
             pipeline.set_state(Gst.State.NULL)
             return
 
+        video_link_ok = vconvert.link(vsink)
+
+        if not video_link_ok:
+            self._set_preview_status(_("Could not link video preview pipeline."))
+            pipeline.set_state(Gst.State.NULL)
+            return
+
+        paintable = vsink.get_property("paintable")
+        self.preview_picture.set_paintable(paintable)
+
+        bus = pipeline.get_bus()
+        if bus is None:
+            self._set_preview_status(_("Could not attach GStreamer bus."))
+            pipeline.set_state(Gst.State.NULL)
+            return
+
+        bus.add_signal_watch()
+        handler_id = bus.connect("message", self._on_preview_bus_message, "main")
+
+        state_ret = pipeline.set_state(Gst.State.PLAYING)
+        if state_ret == Gst.StateChangeReturn.FAILURE:
+            detail = self._preview_start_error_detail(bus)
+            if handler_id:
+                bus.disconnect(handler_id)
+            bus.remove_signal_watch()
+            pipeline.set_state(Gst.State.NULL)
+            if detail:
+                self._set_preview_status(_("Could not start live preview: ") + detail)
+            else:
+                self._set_preview_status(_("Could not start live preview."))
+            return
+
+        self._preview_pipeline = pipeline
+        self._preview_bus = bus
+        self._preview_bus_handler_id = handler_id
+        self._preview_running = True
+        self._preview_source_mode = "device"
+        self._preview_source_uri = ""
         self._preview_volume_element = None
         self._preview_audio_level_available = False
 
@@ -2136,6 +2282,7 @@ class CapturePage(Gtk.Box):
         if include_audio_preview:
             backend = self.audio_backend_combo.get_active_id() or "pulse"
             audio_branch_issue = _("Audio preview pipeline could not be started.")
+
             if backend == "alsa":
                 asrc = Gst.ElementFactory.make("alsasrc", "asrc")
                 if asrc is not None:
@@ -2191,6 +2338,7 @@ class CapturePage(Gtk.Box):
                 if linked_ok:
                     self._preview_volume_element = volume
                     self._preview_audio_level_available = True
+                    self._append_capture_log(f"[preview] Live audio input: {backend}:{audio_source}")
                     if audio_sink_name:
                         self._append_capture_log("[preview] Live audio sink: " + audio_sink_name)
                 else:
@@ -2201,55 +2349,12 @@ class CapturePage(Gtk.Box):
             if self._preview_volume_element is None:
                 if self._auto_fallback_enabled():
                     self._append_capture_status_warning(_("Live audio fallback activated."))
-                    self._append_capture_log("[preview] Live audio fallback activated (audio branch setup).")
+                    self._append_capture_log("[preview] Live audio fallback activated (audio branch setup). " + audio_branch_issue)
                     self._preview_audio_fallback_reason = audio_branch_issue
-                    try:
-                        pipeline.set_state(Gst.State.NULL)
-                    except Exception:
-                        pass
-                    self.start_preview(with_audio=False, preserve_watchdog_state=True)
-                    return
-                self._set_preview_status(audio_branch_issue)
+                else:
+                    self._set_preview_status(audio_branch_issue)
 
-        paintable = vsink.get_property("paintable")
-        self.preview_picture.set_paintable(paintable)
-
-        bus = pipeline.get_bus()
-        if bus is None:
-            self._set_preview_status(_("Could not attach GStreamer bus."))
-            pipeline.set_state(Gst.State.NULL)
-            return
-
-        bus.add_signal_watch()
-        handler_id = bus.connect("message", self._on_preview_bus_message)
-
-        state_ret = pipeline.set_state(Gst.State.PLAYING)
-        if state_ret == Gst.StateChangeReturn.FAILURE:
-            detail = self._preview_start_error_detail(bus)
-            if handler_id:
-                bus.disconnect(handler_id)
-            bus.remove_signal_watch()
-            pipeline.set_state(Gst.State.NULL)
-            if include_audio_preview and self._auto_fallback_enabled():
-                self._append_capture_status_warning(_("Live audio fallback activated."))
-                reason = detail or _("Audio preview could not start.")
-                self._append_capture_log("[preview] Live audio fallback activated (start failure). " + reason)
-                self._preview_audio_fallback_reason = reason
-                self.start_preview(with_audio=False, preserve_watchdog_state=True)
-                return
-            if detail:
-                self._set_preview_status(_("Could not start live preview: ") + detail)
-            else:
-                self._set_preview_status(_("Could not start live preview."))
-            return
-
-        self._preview_pipeline = pipeline
-        self._preview_bus = bus
-        self._preview_bus_handler_id = handler_id
-        self._preview_running = True
-        self._preview_include_audio = include_audio_preview and self._preview_volume_element is not None
-        self._preview_source_mode = "device"
-        self._preview_source_uri = ""
+        self._preview_include_audio = self._preview_volume_element is not None
 
         self.preview_start_button.set_sensitive(False)
         self.preview_stop_button.set_sensitive(True)
@@ -2412,24 +2517,45 @@ class CapturePage(Gtk.Box):
 
         self.on_preview_audio_control_changed(self.preview_mute_check)
 
-    def _on_preview_bus_message(self, _bus, message) -> None:
+    def _on_preview_bus_message(self, _bus, message, source: str = "main") -> None:
         mtype = message.type
 
         if mtype == Gst.MessageType.ERROR:
             err, dbg = message.parse_error()
             dbg_part = f" ({dbg})" if dbg else ""
             error_text = str(err) + dbg_part
-            if self._preview_include_audio and self._auto_fallback_enabled():
+            if self._preview_source_mode == "uri" and self._preview_include_audio and self._auto_fallback_enabled():
                 self._append_capture_status_warning(_("Live audio fallback activated."))
                 self._append_capture_log("[preview] Live audio fallback activated (runtime error). " + error_text)
                 self._preview_audio_fallback_reason = error_text
                 self._restart_preview_source(with_audio=False, preserve_watchdog_state=True)
+            elif source == "audio" and self._preview_include_audio and self._auto_fallback_enabled():
+                self._append_capture_status_warning(_("Live audio fallback activated."))
+                self._append_capture_log("[preview] Live audio fallback activated (runtime error). " + error_text)
+                self._preview_audio_fallback_reason = error_text
+                self._cleanup_preview_audio_pipeline()
+                self._preview_volume_element = None
+                self._preview_include_audio = False
+                self._preview_audio_level_available = False
+                self._stop_preview_audio_watchdog()
+                self._set_audio_level(0.0)
+                self._set_preview_status(_("Live audio fallback activated (video only)."))
             else:
                 self._set_preview_status(_("Preview error: ") + error_text)
                 self.stop_preview()
             return
 
         if mtype == Gst.MessageType.EOS:
+            if source == "audio":
+                self._append_capture_log("[preview] Audio preview stopped (EOS).")
+                self._cleanup_preview_audio_pipeline()
+                self._preview_volume_element = None
+                self._preview_include_audio = False
+                self._preview_audio_level_available = False
+                self._stop_preview_audio_watchdog()
+                self._set_audio_level(0.0)
+                self._set_preview_status(_("Live preview running (video only)."))
+                return
             self._set_preview_status(_("Preview stopped (EOS)."))
             self.stop_preview()
             return
@@ -2461,6 +2587,7 @@ class CapturePage(Gtk.Box):
     def stop_preview(self) -> None:
         if not self._preview_running:
             self._stop_preview_audio_watchdog()
+            self._cleanup_preview_audio_pipeline()
             self._preview_include_audio = False
             self._preview_audio_level_available = False
             self._preview_source_mode = "device"
@@ -2483,6 +2610,7 @@ class CapturePage(Gtk.Box):
         self._preview_source_mode = "device"
         self._preview_source_uri = ""
         self._stop_preview_audio_watchdog()
+        self._cleanup_preview_audio_pipeline()
 
         if bus is not None:
             if handler_id is not None:
