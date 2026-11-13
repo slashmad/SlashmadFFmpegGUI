@@ -1,14 +1,14 @@
-<table>
-  <tr>
-    <td width="132" valign="top">
-      <img src="data/icons/slashmadffmepgui-neon-icon.png" alt="Slashmad FFmpeg GUI icon" width="120">
-    </td>
-    <td valign="top">
-      <h1>SlashmadFFmpegGUI</h1>
-      <p>GTK4 frontend for FFmpeg maintained by <code>slashmad</code>, focused on timelapse, capture, review, trimming, cleanup, and export workflows.</p>
-    </td>
-  </tr>
-</table>
+<p align="center">
+  <img src="slashmad-ffmpeggui.png" width="160" alt="SlashmadFFmpegGUI icon">
+</p>
+
+<h1 align="center">SlashmadFFmpegGUI</h1>
+
+<p align="center">
+  A GTK4 frontend for FFmpeg, focused on timelapse, capture, review, trimming, cleanup and export.
+</p>
+
+---
 
 Repository:
 `https://github.com/slashmad/SlashmadFFmpegGUI`
@@ -243,3 +243,11 @@ This project is intended to be discoverable for common Linux video digitizing an
 </p>
 
 Disclosure: Parts of this project were developed with assistance of OpenAI GPT-5.3-Codex.
+
+## Support
+
+Like SlashmadFFmpegGUI? Buy me a beer 🍺
+
+[![GitHub Sponsors](https://img.shields.io/badge/GitHub%20Sponsors-sponsor-EA4AAA?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/slashmad)
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-buy%20me%20a%20beer-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/slashmad)
+[![Liberapay](https://img.shields.io/badge/Liberapay-donate-F6C915?logo=liberapay&logoColor=black)](https://liberapay.com/slashmad/)
